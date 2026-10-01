@@ -3,7 +3,8 @@
 > **VERBINDLICHE ANWEISUNG:**
 > 1. Die gesamte Projektarbeit wird ausnahmslos in **LaTeX** verfasst.
 > 2. Der sprachliche Stil und die Textgestaltung richten sich zwingend nach `styles.md` (vorläufig orientiert an `ThreadstormDoku (1).pdf` und den RH-Köln-Leitfaden-Vorgaben).
-> 3. Keine kostenpflichtigen AWS-Ressourcen werden ohne vorherige Freigabe der Architektur und Kostenschätzung erzeugt.
+> 3. Im Quellcode gelten ausschließlich sporadische, umgangssprachliche Kommentare (keine großen Blöcke).
+> 4. Keine kostenpflichtigen AWS-Ressourcen werden ohne vorherige Freigabe der Architektur und Kostenschätzung erzeugt.
 
 ---
 
@@ -11,9 +12,11 @@
 
 - **Thema:** Aufbau und Evaluation einer GitOps-basierten Kubernetes-Umgebung auf AWS mit k3s durch kontrollierte Fehlerexperimente
 - **Hochschule:** Rheinische Hochschule Köln (Fachbereich Ingenieurwesen / Informatik B.Sc.)
-- **Erstprüfer:** Prof. Dr. Johannes Mauer (vorläufig angenommen gem. Vorlage Threadstorm)
+- **Erstprüfer:** Prof. Dr. Johannes Mauer
 - **Autor:** Konstantin Muschallik
 - **Status:** Vorbereitung & lokale Entwicklung
+- **Umfang:** Ca. 25–35 Seiten Textteil
+- **Zeitrahmen:** 2–3 Monate (Semesterende)
 
 ---
 
@@ -33,10 +36,10 @@
 
 - **Terraform:** Verwaltet ausschließlich die AWS-Basisinfrastruktur (VPC, Subnetze, Security Groups, EC2-Instanz, Elastic IP).
 - **cloud-init (user-data):** Einmaliger automatischer Bootstrap von k3s (leichtgewichtige Kubernetes-Distribution) und Argo CD auf der EC2-Instanz.
-- **Argo CD:** Verwaltet alle Anwendungsressourcen per GitOps (Deployments, Services, Ingress, ConfigMaps).
-- **Helm:** Paketiert die Anwendungskonfiguration (`resilience-lab`) mit sauberen Werten für lokal (`values-local.yaml`) und AWS (`values-aws.yaml`).
-- **Anwendung:** Leichtgewichtige REST-API (Python/FastAPI oder Go) mit HTML-Statusoberfläche und geschütztem `/lab`-Endpunkt für Störungsinduktion.
-- **Lastmessung:** k6 / Python-Messskripte für Latenzen (p50/p95), HTTP-Fehlerraten und Erholzeiten.
+- **Argo CD:** Verwaltet alle Anwendungsressourcen per GitOps (Deployments, Services, Ingress).
+- **Kustomize:** Deklarative Manifeststrukturierung ohne Templating-Overhead (`kustomize/base`, `kustomize/overlays/local`, `kustomize/overlays/aws`).
+- **Anwendung:** Leichtgewichtige REST-API (Python/FastAPI) mit HTML-Statusoberfläche und geschütztem `/lab`-Endpunkt für Störungsinduktion.
+- **Lastmessung:** Python- & k6-Messskripte für Latenzen (p50/p95), HTTP-Fehlerraten und Erholzeiten.
 
 ---
 
@@ -45,18 +48,16 @@
 - [x] Dateisichtung beider Repositories (`k3s_aws` & `leitfaden-main_10.2025`)
 - [x] Analyse der Threadstorm-Referenzarbeit & des RH-Leitfadens
 - [x] Architektur-Umstellung auf k3s + EC2 (Kostenersparnis ~22 $/Monat statt ~187 $/Monat für EKS)
+- [x] Wechsel von Helm auf Kustomize (nativ in kubectl und Argo CD integriert)
 - [x] Projektübersicht (`PROJECT_STATUS.md`) und `.gitignore` angelegt
-- [ ] Vorläufige `styles.md` definiert und zur Prüfung bereitgestellt
-- [ ] LaTeX-Vorlage im Ordner `thesis/` eingerichtet und kompiliert
-- [ ] Demo-Webanwendung (`app/`) implementiert
-- [ ] Helm-Chart (`helm/resilience-lab`) erstellt
-- [ ] Lokale Validierung im Container / lokalen Kubernetes
-- [ ] Terraform-Code (`terraform/`) verfasst
-- [ ] Kostenfreigabe vor AWS-Bereitstellung eingeholt
-- [ ] Experimente durchgeführt & Messdaten erfasst
-- [ ] LaTeX-Ausarbeitung verfasst und geprüft
-
----
-
-## 5. Offene Fragen & Klärungsbedarf
-(Siehe aktuelle Fragenabfrage im Dialog)
+- [x] Vorläufige `styles.md` definiert
+- [x] LaTeX-Vorlage im Ordner `thesis/` eingerichtet (9 Kapitel strukturiert)
+- [x] Demo-Webanwendung (`app/`) mit Dashboard und Störungsendpunkten implementiert
+- [x] Kustomize-Overlays (`kustomize/base`, `local`, `aws`) erstellt und validiert
+- [x] Argo CD Application-Manifest auf Kustomize angepasst
+- [x] Terraform-Code (`terraform/`) verfasst
+- [x] GitHub Actions CI-Pipeline (`.github/workflows/ci.yml`) erstellt
+- [ ] AWS-Konto & Zugriffs-Check (lokales AWS CLI)
+- [ ] Kostenfreigabe vor AWS-Bereitstellung einholen
+- [ ] Experimente durchführen & Messdaten erfassen
+- [ ] LaTeX-Ausarbeitung mit konkreten Ergebnissen füllen

@@ -13,7 +13,7 @@ Dieses Repository enthält den vollständigen Quellcode, die Infrastruktur-Defin
 
 > *„Aufbau und Evaluation einer GitOps-basierten Kubernetes-Umgebung auf AWS mit k3s durch kontrollierte Fehlerexperimente“*
 
-Ziel ist die Untersuchung automatisierter Bereitstellungsmethoden (Infrastructure as Code via **Terraform**) und kontinuierlicher Konfigurationsabgleiche (GitOps via **Argo CD**) zur Steigerung der Ausfallsicherheit von Webanwendungen auf einer ressourcenschonenden, kostengünstigen Kubernetes-Plattform (**k3s auf AWS EC2**).
+Ziel ist die Untersuchung automatisierter Bereitstellungsmethoden (Infrastructure as Code via **Terraform**) und kontinuierlicher Konfigurationsabgleiche (GitOps via **Argo CD** mit **Kustomize**) zur Steigerung der Ausfallsicherheit von Webanwendungen auf einer ressourcenschonenden, kostengünstigen Kubernetes-Plattform (**k3s auf AWS EC2**).
 
 ---
 
@@ -28,12 +28,11 @@ k3s_aws/
 │   ├── templates/          # Modernes HTML/JS Dashboard mit Live-Polling
 │   ├── Dockerfile          # Sicheres Container-Image (Non-Root User)
 │   └── requirements.txt    # Abhängigkeiten (FastAPI, Uvicorn, Jinja2)
-├── helm/resilience-lab/    # Helm-Chart zur deklarativen Anwendungsbereitstellung
-│   ├── Chart.yaml          # Metadaten des Charts
-│   ├── values.yaml         # Standardwerte & Health-Check-Konfiguration
-│   ├── values-local.yaml   # Overrides für lokale Entwicklung
-│   ├── values-aws.yaml     # Overrides für k3s/AWS mit Traefik Ingress
-│   └── templates/          # Kubernetes-Ressourcen (Deployment, Service, Ingress)
+├── kustomize/              # Deklarative Kubernetes-Manifeste ohne Templating
+│   ├── base/               # Basis-Ressourcen (Deployment & Service)
+│   └── overlays/           
+│       ├── local/          # Patch für lokale Umgebung (NodePort, 1 Replikat)
+│       └── aws/            # Patch für AWS (2 Replikate, Traefik Ingress)
 ├── terraform/              # AWS-Infrastruktur als Code
 │   ├── versions.tf         # Provider & Mindestversionen
 │   ├── variables.tf        # Parametrisierung (Region, Instanztyp)
@@ -47,7 +46,7 @@ k3s_aws/
 │   └── application.yaml    # Argo CD App mit Automated Sync & Self-Heal
 ├── experiments/            # Versuchsplanung, Lasttests & Auswertung
 │   ├── plan/               # Detaillierter Versuchsplan für die 3 Kernexperimente
-│   └── scripts/            # k6- & Python-Lastgeneratoren mit Latenzmetriken
+│   └── scripts/            # Python- & k6-Lastgeneratoren mit Latenzmetriken
 ├── docs/                   # Betriebs- & Kostendokumentation
 │   ├── setup.md            # Schritt-für-Schritt Inbetriebnahmeanleitung
 │   ├── cost-estimate.md    # Transparente AWS-Kostenschätzung (~22 USD/Monat)

@@ -7,7 +7,7 @@ Die Gesamtlösung gliedert sich in drei funktionale Schichten:
 \begin{enumerate}
     \item \textbf{Infrastrukturschicht (AWS):} Eine Virtuelle Private Cloud (VPC) mit öffentlichen Subnetzen, Internet Gateway, Security Groups sowie einer EC2-Instanz (`t3.small`) mit fest zugewiesener Elastic IP.
     \item \textbf{Plattformschicht (k3s \& Argo~CD):} k3s stellt die containerbasierte Laufzeitumgebung bereit. Argo~CD überwacht als GitOps-Controller das Anwendungs-Repository.
-    \item \textbf{Anwendungsschicht (Resilience Lab):} Eine zustandslose Webanwendung, bestehend aus REST-API, Statusoberfläche und geschütztem Fehlerinduktionsmodul, paketiert über ein Helm-Chart.
+    \item \textbf{Anwendungsschicht (Resilience Lab):} Eine zustandslose Webanwendung, bestehend aus REST-API, Statusoberfläche und geschütztem Fehlerinduktionsmodul, strukturiert über Kustomize.
 \end{enumerate}
 
 \section{Wahl von k3s gegenüber Amazon EKS}
@@ -21,12 +21,12 @@ k3s auf einer `t3.small`-Instanz bietet bei monatlichen Kosten von ca. 22~USD di
 Um Konflikte durch konkurrierende Controller zu vermeiden, gilt ein striktes Separationsprinzip:
 \begin{itemize}
     \item \textbf{Terraform} verwaltet ausschließlich Cloud-Ressourcen (VPC, EC2, Security Groups) und initiiert den einmaligen k3s- und Argo-CD-Bootstrap via Cloud-Init.
-    \item \textbf{Argo~CD} verwaltet alle Kubernetes-Anwendungsressourcen (Deployments, Services, Ingress, ConfigMaps). Terraform greift nach dem Bootstrap nicht mehr modifizierend in Anwendungsmanifeste ein.
+    \item \textbf{Argo~CD} verwaltet alle Kubernetes-Anwendungsressourcen (Deployments, Services, Ingress). Terraform greift nach dem Bootstrap nicht mehr modifizierend in Anwendungsmanifeste ein.
 \end{itemize}
 
-\section{Helm als Paketierungsformat}
-\label{sec:helm-paketierungsformat}
-Die Anwendungskonfiguration wird als Helm-Chart gebündelt. Helm ermöglicht über getrennte Value-Dateien (`values-local.yaml` für lokale Cluster, `values-aws.yaml` für k3s auf AWS) eine umgebungsunabhängige, parameterisierbare Manifestverwaltung ohne Duplizierung von YAML-Code.
+\section{Kustomize zur Manifestverwaltung}
+\label{sec:kustomize-manifestverwaltung}
+Die Kubernetes-Konfiguration wird mittels Kustomize verwaltet. Im Vergleich zu Helm verzichtet Kustomize auf eine eigene Template-Sprache und arbeitet deklarativ mit Plain-YAML-Manifesten. Über ein Base-Overlay-Prinzip werden gemeinsame Ressourcen in einer Basis (\texttt{base}) definiert und umgebungsspezifische Anpassungen (\texttt{overlays/local} für lokale Cluster, \texttt{overlays/aws} für k3s mit Traefik-Ingress) per Patch überlagert. Dies reduziert Redundanz, vermeidet Template-Fehler und ist nativ in \texttt{kubectl} sowie Argo~CD integriert.
 
 \section{Lokale Entwicklungsumgebung und Cloud-Umgebung}
 \label{sec:lokal-vs-cloud}

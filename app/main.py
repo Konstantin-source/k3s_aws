@@ -10,28 +10,25 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
+# logger aufsetzen
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("resilience-lab")
 
 app = FastAPI(title="Resilience Lab API", version=os.getenv("APP_VERSION", "1.0.0"))
-
 templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), "templates"))
 
-# Startzeitpunkt
 START_TIME = time.time()
 APP_VERSION = os.getenv("APP_VERSION", "1.0.0")
-APP_ENVIRONMENT = os.getenv("APP_ENV", "production")
+APP_ENV = os.getenv("APP_ENV", "production")
 
-# Zustände für Fehlerinduktion (In-Memory pro Pod)
+# zustände für die tests im speicher halten
 LAB_STATE = {
     "is_live": True,
     "is_ready": True,
     "simulate_hang": False,
-    "crash_count": 0,
     "custom_delay_seconds": 0.0
 }
 
-# Simulierte In-Memory-Aufträge (Order Processing)
 class Order(BaseModel):
     id: str
     title: str
@@ -39,6 +36,7 @@ class Order(BaseModel):
     created_at: str
     processed_by_pod: str
 
+# dummy daten
 ORDERS: List[dict] = [
     {
         "id": "ORD-1001",
@@ -57,138 +55,126 @@ def get_pod_metadata():
     except Exception:
         pass
     
-    uptime_seconds = int(time.time() - START_TIME)
+    uptime = int(time.time() - START_TIME)
     return {
         "pod_name": os.getenv("POD_NAME", hostname),
         "pod_namespace": os.getenv("POD_NAMESPACE", "default"),
         "node_name": os.getenv("NODE_NAME", "local-node"),
         "pod_ip": pod_ip,
         "app_version": APP_VERSION,
-        "environment": APP_ENVIRONMENT,
-        "uptime_seconds": uptime_seconds,
-        "uptime_formatted": f"{uptime_seconds // 60}m {uptime_seconds % 60}s",
+        "environment": APP_ENV,
+        "uptime_seconds": uptime,
+        "uptime_formatted": f"{uptime // 60}m {uptime % 60}s",
         "is_live": LAB_STATE["is_live"],
         "is_ready": LAB_STATE["is_ready"],
         "simulate_hang": LAB_STATE["simulate_hang"]
     }
 
+# middleware für latenz und künstliche hänger
 @app.middleware("http")
-async def add_timing_and_hang_middleware(request: Request, call_next):
-    # Bei aktiviertem Hang-Zustand blockieren (für Liveness-Ausfall)
+async def handle_request_timing(request: Request, call_next):
+    # falls hänger aktiviert, blockieren wir absichtlich
     if LAB_STATE["simulate_hang"] and request.url.path not in ["/lab/reset", "/lab/status"]:
-        logger.warning("Pod befindet sich im simulierten Hänger/Deadlock!")
         time.sleep(30)
     
     if LAB_STATE["custom_delay_seconds"] > 0:
         time.sleep(LAB_STATE["custom_delay_seconds"])
 
-    start_time = time.perf_counter()
+    start = time.perf_counter()
     response = await call_next(request)
-    duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
+    duration_ms = round((time.perf_counter() - start) * 1000, 2)
     response.headers["X-Response-Time-Ms"] = str(duration_ms)
     response.headers["X-Served-By-Pod"] = os.getenv("POD_NAME", socket.gethostname())
     return response
 
-# --- Web-Dashboard ---
+# web dashboard
 @app.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request):
-    metadata = get_pod_metadata()
     return templates.TemplateResponse("index.html", {
         "request": request,
-        "meta": metadata,
+        "meta": get_pod_metadata(),
         "orders": ORDERS[-10:],
         "lab": LAB_STATE
     })
 
-# --- JSON Info API ---
+# pod info json
 @app.get("/api/info")
 async def api_info():
-    metadata = get_pod_metadata()
     return JSONResponse(content={
         "status": "ok",
-        "data": metadata,
+        "data": get_pod_metadata(),
         "timestamp": datetime.now(timezone.utc).isoformat()
     })
 
-# --- Order Processing API (Fachlicher Praxisfall) ---
+# aufträge auflisten
 @app.get("/api/orders")
 async def list_orders():
     return JSONResponse(content={"orders": ORDERS[-20:]})
 
+# neuen testauftrag anlegen
 @app.post("/api/orders")
 async def create_order(title: Optional[str] = "Neuer Berechnungsauftrag"):
-    new_order = {
+    order = {
         "id": f"ORD-{len(ORDERS) + 1001}",
         "title": title,
         "status": "PROCESSING",
         "created_at": datetime.now(timezone.utc).isoformat(),
         "processed_by_pod": os.getenv("POD_NAME", socket.gethostname())
     }
-    ORDERS.append(new_order)
-    logger.info(f"Auftrag {new_order['id']} von Pod {new_order['processed_by_pod']} erstellt.")
-    return JSONResponse(content=new_order, status_code=status.HTTP_201_CREATED)
+    ORDERS.append(order)
+    return JSONResponse(content=order, status_code=status.HTTP_201_CREATED)
 
-# --- Kubernetes Health Probes ---
+# liveness probe
 @app.get("/health/live")
 async def liveness_probe():
-    """Liveness Probe: Prüft, ob der Container-Prozess noch responsiv ist."""
     if not LAB_STATE["is_live"] or LAB_STATE["simulate_hang"]:
-        logger.error("Liveness-Probe fehlgeschlagen!")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Liveness check failed")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="deadlock")
     return {"status": "alive", "pod": os.getenv("POD_NAME", socket.gethostname())}
 
+# readiness probe
 @app.get("/health/ready")
 async def readiness_probe():
-    """Readiness Probe: Steuert, ob der Pod Traffic vom Service erhalten darf."""
     if not LAB_STATE["is_ready"]:
-        logger.warning("Readiness-Probe meldet UNREADY!")
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Pod is not ready for traffic")
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="not ready")
     return {"status": "ready", "pod": os.getenv("POD_NAME", socket.gethostname())}
 
-# --- Geschütztes Fault-Injection-Labor (Experimente) ---
+# status vom labor abfragen
 @app.get("/lab/status")
 async def lab_status():
     return JSONResponse(content={"state": LAB_STATE, "meta": get_pod_metadata()})
 
+# prozess crashen lassen
 @app.post("/lab/crash")
 async def trigger_crash():
-    """Experiment 1: Simuliert einen abrupten Prozessabsturz."""
-    logger.critical("FORCIERTER PROZESSABSTURZ ausgelöst über /lab/crash!")
-    # Kurz verzögern, damit Response gesendet werden kann, dann Exit
-    def do_exit():
+    def exit_now():
         time.sleep(0.1)
         os._exit(1)
     
     import threading
-    threading.Thread(target=do_exit, daemon=True).start()
-    return JSONResponse(content={
-        "action": "crash_initiated",
-        "message": f"Pod {socket.gethostname()} beendet Prozess sofort mit Exit-Code 1."
-    })
+    threading.Thread(target=exit_now, daemon=True).start()
+    return JSONResponse(content={"message": "prozess wird beendet"})
 
+# readiness toggeln
 @app.post("/lab/toggle-ready")
 async def toggle_ready():
-    """Experiment 2 Vorstufe: Schaltet Readiness um."""
     LAB_STATE["is_ready"] = not LAB_STATE["is_ready"]
-    logger.info(f"Readiness umgeschaltet auf: {LAB_STATE['is_ready']}")
     return JSONResponse(content={"is_ready": LAB_STATE["is_ready"]})
 
+# deadlock simulieren
 @app.post("/lab/simulate-hang")
 async def simulate_hang():
-    """Optionales Experiment: Simuliert Deadlock/Hänger (triggert Liveness-Fehlschlag)."""
     LAB_STATE["simulate_hang"] = True
     LAB_STATE["is_live"] = False
-    logger.error("Simulierter Deadlock aktiviert! Anfragen werden blockiert.")
-    return JSONResponse(content={"status": "deadlock_simulated"})
+    return JSONResponse(content={"status": "deadlock"})
 
+# alles wieder auf normal stellen
 @app.post("/lab/reset")
 async def reset_lab():
     LAB_STATE["is_live"] = True
     LAB_STATE["is_ready"] = True
     LAB_STATE["simulate_hang"] = False
     LAB_STATE["custom_delay_seconds"] = 0.0
-    logger.info("Labor-Zustand zurückgesetzt.")
-    return JSONResponse(content={"status": "reset_successful", "state": LAB_STATE})
+    return JSONResponse(content={"status": "reset", "state": LAB_STATE})
 
 if __name__ == "__main__":
     import uvicorn
