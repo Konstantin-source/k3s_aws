@@ -3,34 +3,32 @@
 
 \section{Ausgangssituation und Motivation}
 \label{sec:ausgangssituation-motivation}
-In modernen softwaregetriebenen Unternehmen stellen Verfügbarkeit, Ausfallsicherheit und kurze Releasezyklen von Webanwendungen zentrale Erfolgsfaktoren dar. Cloud-native Architekturen auf Basis von Container-Virtualisierung und Orchestrierungsplattformen wie Kubernetes haben sich hierbei als Industriestandard etabliert. Dennoch bringt der Betrieb komplexer verteilter Systeme signifikante Herausforderungen mit sich: Manuelle Konfigurationsänderungen, Konfigurationsdrift zwischen Entwicklungs- und Produktionsumgebungen sowie unzureichende Resilienzmechanismen führen in der Praxis wiederkehrend zu Dienstunterbrechungen.
+In modernen softwaregetriebenen Unternehmen stellen Hochverfügbarkeit, Ausfallsicherheit und kurze Releasezyklen von Webanwendungen zentrale Erfolgsfaktoren für die digitale Wertschöpfung dar.\customcite{beyer2016site} Cloud-native Architekturen auf Basis von Container-Virtualisierung und deklarativen Orchestrierungsplattformen wie Kubernetes haben sich hierbei branchenweit als de-facto-Standard etabliert.\customcite{hightower2022kubernetes} Durch die Abstraktion der zugrunde liegenden Serverinfrastruktur verspricht diese Technologie eine automatisierte Skalierung und eine weitreichende Selbstreparatur bei Ausfällen.
 
-Die vorliegende Arbeit untersucht den praktischen Einsatz moderner Betriebsparadigmen, namentlich Infrastructure as Code (IaC) mittels Terraform sowie GitOps unter Verwendung von Argo~CD. Als kosteneffiziente und ressourcenschonende Kubernetes-Plattform kommt hierbei k3s auf einer virtuellen Maschine in Amazon Web Services (AWS) zum Einsatz.
+Dennoch bringt der praktische Betrieb komplexer verteilter Systeme erhebliche betriebliche Risiken mit sich: Manuelle Konfigurationsanpassungen direkt auf Produktivumgebungen, unbemerkter Konfigurationsdrift (Configuration Drift) zwischen Test- und Produktionssystemen sowie fehlerhafte Release-Rollouts führen in der Praxis regelmäßig zu ungeplanten Dienstunterbrechungen.\customcite{burns2018designing} Um diesen Fehlerquellen systematisch zu begegnen, gewinnen automatisierte Betriebsparadigmen zunehmend an Bedeutung: \textit{Infrastructure as Code} (IaC) zur reproduzierbaren Bereitstellung der Cloud-Ressourcen sowie \textit{GitOps} als modellgetriebener Ansatz zur kontinuierlichen Zustandsabgleichung über Git-Repositories.\customcite{opengitops2025}
 
-\section{Problemstellung und Zielsetzung}
+Für kleine und mittelständische Unternehmen (KMU) oder Entwicklungsteams stellen jedoch die hohen Einstiegskosten und die administrative Komplexität verwalteter Kubernetes-Lösungen wie Amazon Elastic Kubernetes Service (EKS) eine signifikante Hürde dar. Die vorliegende Arbeit untersucht daher, inwieweit eine leichtgewichtige, ressourcenschonende Kubernetes-Distribution (\textit{k3s}) auf einer kostengünstigen virtuellen Maschine in Amazon Web Services (AWS) in Kombination mit Terraform und Argo~CD eine belastbare Plattform für den produktionsnahen Betrieb bereitstellen kann.
+
+\section{Problemstellung, Zielsetzung und Abgrenzung}
 \label{sec:problemstellung-zielsetzung}
-Oftmals wird davon ausgegangen, dass der bloße Einsatz von Kubernetes bereits Hochverfügbarkeit und automatische Selbstreparatur garantiert. In der betrieblichen Realität erfordert eine belastbare Resilienz jedoch ein aufeinander abgestimmtes Zusammenspiel aus Anwendungsarchitektur (z.\,B. Health Probes), Deklaration des Sollzustands im Versionskontrollsystem und automatisierten Reconcilern.
+In der Praxis wird häufig fälschlicherweise angenommen, dass der bloße Einsatz von Kubernetes bereits eine inhärente Hochverfügbarkeit garantiert. In der Realität erfordert echte Ausfallsicherheit jedoch ein feingliedrig abgestimmtes Zusammenspiel aus containerisierter Anwendungsarchitektur (präzise Health- und Readiness-Checks), deklarativer Sollzustandsdefinition in Versionskontrollsystemen und robusten Controller-Schleifen zur Fehlerbehebung.\customcite{k8sdocs2026}
 
-Ziel dieser Arbeit ist der Aufbau einer vollautomatisierten, reproduzierbaren Labor- und Betriebsumgebung sowie die empirische Überprüfung ihrer Resilienzeigenschaften durch gezielte, kontrollierte Störungsexperimente.
-
-\section{Abgrenzung}
-\label{sec:abgrenzung}
-Der Schwerpunkt dieser Arbeit liegt auf der Infrastrukturautomatisierung, dem GitOps-Workflow und der methodischen Fehlerevaluation. Die zu betreibende Webanwendung wird bewusst schlank als zustandslose REST-API mit begleitender Benutzerschnittstelle konzipiert, um Seiteneffekte von Datenbank-Transaktionen oder persistentem Speicher zu isolieren. Auf den Einsatz von Managed Kubernetes Services mit hoher monatlicher Grundgebühr (wie Amazon EKS) wird zugunsten einer transparenten, kostengünstigen k3s-Installation auf AWS EC2 verzichtet.
+Ziel dieser Projektarbeit ist der Aufbau einer vollautomatisierten, reproduzierbaren Cloud- und Kubernetes-Umgebung auf AWS sowie die empirische Überprüfung ihrer Resilienzvorteile durch kontrollierte Störungsexperimente (Chaos Engineering im Kleinmaßstab). Der Schwerpunkt liegt auf der Infrastrukturautomatisierung und dem GitOps-Workflow; die Webanwendung wird bewusst als zustandslose REST-API mit Dashboard konzipiert, um Seiteneffekte persistenter Speicher zu isolieren. Auf kostenintensive Managed Services wie Amazon EKS wird zugunsten einer transparenten, kostengünstigen k3s-Installation auf AWS EC2 verzichtet.
 
 \section{Leitfrage und Erwartungen}
 \label{sec:leitfrage-erwartungen}
-Aus der Problemstellung leitet sich die zentrale Leitfrage der Arbeit ab:
+Aus der Problemstellung leitet sich die zentrale Forschungsleitfrage ab:
 \begin{quote}
-\textit{Inwieweit verbessern automatisierte Bereitstellung mittels Infrastructure as Code und GitOps-gesteuerte Synchronisation die Ausfallsicherheit und Wiederherstellungsfähigkeit einer betrieblichen Webanwendung auf einer kosteneffizienten Kubernetes-Umgebung gegenüber manuell verwalteten Deployments?}
+\textit{Inwieweit verbessern eine automatisierte Bereitstellung mittels Infrastructure as Code und eine GitOps-gesteuerte Synchronisation die Ausfallsicherheit und Wiederherstellungsfähigkeit einer betrieblichen Webanwendung auf einer kosteneffizienten Kubernetes-Umgebung gegenüber manuell verwalteten Deployments?}
 \end{quote}
 
-Zur Beantwortung werden folgende überprüfbare Erwartungen formuliert:
-\begin{enumerate}
-    \item \textbf{Erwartung 1 (Prozess-Resilienz):} Bei einem spontanen Absturz des Anwendungsprozesses stellt die Kubernetes-Plattform den Dienst innerhalb kurzer Zeit automatisch wieder her. Bei redundanter Pod-Auslegung treten keine messbaren Dienstausfälle für Endbenutzer auf.
+Zur Beantwortung dieser Leitfrage werden drei überprüfbare Erwartungen formuliert:
+\begin{enumerate}[noitemsep,topsep=2pt]
+    \item \textbf{Erwartung 1 (Prozess-Resilienz):} Bei einem spontanen Absturz des Anwendungsprozesses stellt die Kubernetes-Laufzeitumgebung den Dienst binnen weniger Sekunden automatisch wieder her. Bei einer redundanten Pod-Auslegung treten im Vergleich zur Einzelinstanz keine messbaren Dienstausfälle für Endbenutzer auf.
     \item \textbf{Erwartung 2 (Deployment-Schutz):} Ein fehlerhaftes Release, dessen Readiness-Prüfung fehlschlägt, führt zu keinem Ausfall des Produktivverkehrs, da bestehende Instanzen aktiv bleiben. Die Wiederherstellung über einen Git-Revert erfolgt deterministisch innerhalb definierter Zeitgrenzen.
     \item \textbf{Erwartung 3 (GitOps-Selbstheilung):} Manuelle Konfigurationsabweichungen (Configuration Drift) im Cluster werden von Argo~CD automatisch erkannt und innerhalb des Abgleichintervalls auf den im Git deklarierten Sollzustand zurückgeführt.
 \end{enumerate}
 
 \section{Vorgehensweise und Aufbau der Arbeit}
 \label{sec:vorgehensweise-aufbau}
-Die Arbeit gliedert sich in neun Kapitel. Nach der Einführung werden in Kapitel~\ref{chap:praxiskontext-anforderungen} der praktische Kontext und die Anforderungen definiert. Kapitel~\ref{chap:technische-grundlagen} vermittelt die erforderlichen technischen Grundlagen. In Kapitel~\ref{chap:architektur-entwurf} wird die Gesamtarchitektur entworfen und begründet. Die praktische Implementierung wird in Kapitel~\ref{chap:implementierung} beschrieben. Kapitel~\ref{chap:versuchsaufbau-evaluationsmethodik} legt den Versuchsplan dar, dessen Resultate in Kapitel~\ref{chap:ergebnisse} dokumentiert werden. Kapitel~\ref{chap:diskussion-praxistransfer} diskutiert die Ergebnisse und den Praxistransfer. Kapitel~\ref{chap:fazit-ausblick} schließt mit einem Fazit und Ausblick ab.
+Die Arbeit gliedert sich in neun Kapitel. Kapitel~\ref{chap:praxiskontext-anforderungen} beschreibt den praktischen Kontext und die operationalen Anforderungen. Kapitel~\ref{chap:technische-grundlagen} vermittelt die theoretischen und technischen Grundlagen. In Kapitel~\ref{chap:architektur-entwurf} wird die Gesamtlösung architektonisch entworfen und begründet. Kapitel~\ref{chap:implementierung} dokumentiert die praktische Umsetzung in Code und Konfiguration. Kapitel~\ref{chap:versuchsaufbau-evaluationsmethodik} legt den Versuchsplan dar, dessen Resultate in Kapitel~\ref{chap:ergebnisse} präsentiert werden. Kapitel~\ref{chap:diskussion-praxistransfer} diskutiert die Ergebnisse und den betrieblichen Transfer. Kapitel~\ref{chap:fazit-ausblick} fasst die Arbeit zusammen und gibt einen Ausblick.

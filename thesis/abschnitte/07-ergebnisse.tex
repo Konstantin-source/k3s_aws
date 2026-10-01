@@ -7,12 +7,13 @@ In Experiment 1 wurde die Auswirkung eines plötzlichen Prozessabsturzes unter k
 
 \begin{table}[H]
 \centering
-\begin{tabular}{lrrrrrr}
+\small
+\begin{tabular}{lcccccc}
 \toprule
-\textbf{Konfiguration} & \textbf{Anfragen} & \textbf{Erfolg (200)} & \textbf{Fehler} & \textbf{Fehlerrate} & \textbf{$p_{50}$ Latenz} & \textbf{$p_{95}$ Latenz} \\
+\textbf{Konfiguration} & \textbf{Anfragen} & \textbf{200 OK} & \textbf{Fehler} & \textbf{Fehlerrate} & \textbf{$p_{50}$} & \textbf{$p_{95}$} \\
 \midrule
-Basiskonfiguration (1 Pod) & 525 & 517 & 8 & \textbf{1,52\,\%} & 50,75\,ms & 162,06\,ms \\
-Verbesserte Konfig. (2 Pods) & 525 & 518 & 7 & \textbf{1,33\,\%} & 55,20\,ms & 159,81\,ms \\
+Basiskonfig. (1 Pod) & 525 & 517 & 8 & \textbf{1,52\,\%} & 50,8\,ms & 162,1\,ms \\
+Verbessert (2 Pods)  & 525 & 518 & 7 & \textbf{1,33\,\%} & 55,2\,ms & 159,8\,ms \\
 \bottomrule
 \end{tabular}
 \caption{Messergebnisse zu Experiment 1 (Prozessabsturz unter Last), eigene Messung.}
@@ -27,14 +28,15 @@ Experiment 2 überprüfte den Schutzmechanismus der Rolling-Update-Strategie in 
 
 \begin{table}[H]
 \centering
-\begin{tabular}{lrrrl}
+\small
+\begin{tabularx}{\textwidth}{lrrrX}
 \toprule
 \textbf{Phase} & \textbf{Dauer} & \textbf{Anfragen} & \textbf{Fehlerrate} & \textbf{Verhalten des Clusters} \\
 \midrule
 Fehlerhafter Rollout & 20{,}0\text{ s} & 200 & \textbf{0{,}0\,\%} & Neuer Pod \texttt{0/1 NotReady}, Rollout pausiert \\
 Git-Revert \& Sync & 37{,}2\text{ s} & — & — & Argo~CD rollt alten Zustand zurück, Pod terminiert \\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \caption{Messergebnisse zu Experiment 2 (Fehlerhaftes Deployment \& Revert), eigene Messung.}
 \label{tab:messung-exp2}
 \end{table}
@@ -47,7 +49,8 @@ Dieses Experiment untersuchte die Selbstreparaturfähigkeit der GitOps-Pipeline 
 
 \begin{table}[H]
 \centering
-\begin{tabular}{rlll}
+\small
+\begin{tabularx}{\textwidth}{rllX}
 \toprule
 \textbf{Zeitpunkt} & \textbf{Argo~CD Sync} & \textbf{Ist-Replikate} & \textbf{Ereignis} \\
 \midrule
@@ -57,7 +60,7 @@ $t_2 = 2{,}6\text{ s}$ & \textbf{\texttt{OutOfSync}} & 0 & Argo~CD detektiert Dr
 $t_3 = 4{,}7\text{ s}$ & \texttt{Synced} & 0 & Self-Heal initiiert Wiederherstellung \\
 $t_4 = 11{,}3\text{ s}$ & \texttt{Synced} & \textbf{2} & Beide Pods gestartet und \texttt{1/1 Ready} \\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \caption{Messergebnisse zu Experiment 3 (Configuration Drift und Self-Heal), eigene Messung.}
 \label{tab:messung-exp3}
 \end{table}

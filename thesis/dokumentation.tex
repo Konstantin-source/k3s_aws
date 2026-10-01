@@ -173,10 +173,11 @@
 \renewcommand{\cftafterprmtitleskip}{10pt}
 
 \newcounter{promptcounter}
-\newcommand{\promptentry}[1]{%
+\newcommand{\promptentry}[2]{%
   \refstepcounter{promptcounter}%
   \addcontentsline{prm}{prompt}{\protect\numberline{\thepromptcounter}#1}%
-  #1%
+  \textbf{Prompt \thepromptcounter{} (#1):}\nopagebreak\par
+  #2%
 }
 
 % Anhangsverzeichnis
@@ -234,14 +235,11 @@
 
 % Schmutztitel
 \input{zusatz/schmutztitel}
-
-\newpage
-\thispagestyle{empty}
-\quad 
 \newpage
 
 % Haupttitel
 \input{zusatz/haupttitel}
+\newpage
 
 \setlength\parindent{0pt}
 
@@ -267,41 +265,30 @@
     \input{abschnitte/08-diskussion-praxistransfer}
     \input{abschnitte/09-fazit-ausblick}
 
-    % Verzeichnisse
+    % Verzeichnisse (kompakt gebuendelt, um fast leere Seiten zu vermeiden)
     \newpage
     \phantomsection
     \label{sec:Abkuerzungsverzeichnis}
     \addcontentsline{toc}{chapter}{Abkürzungsverzeichnis}
     \printnoidxglossary[type=\acronymtype,title={Abkürzungsverzeichnis}, nonumberlist]
-    \newpage
     
+    \newpage
     \phantomsection
-    \addcontentsline{toc}{chapter}{Abbildungsverzeichnis}
+    \addcontentsline{toc}{chapter}{Abbildungs-, Tabellen-, Prompt- und Anhangsverzeichnis}
     \listoffigures
-    \newpage
-    
-    \phantomsection
-    \addcontentsline{toc}{chapter}{Tabellenverzeichnis}
+    \vspace{0.8cm}
     \listoftables
-    \newpage
-    
-    \phantomsection
-    \addcontentsline{toc}{chapter}{Promptverzeichnis}
-    \markboth{Promptverzeichnis}{}
+    \vspace{0.8cm}
     \listofprompt
+    \vspace{0.8cm}
+    \listofappendix
+    
     \newpage
-
     \phantomsection
     \addcontentsline{toc}{chapter}{Literaturverzeichnis}
     \label{chap:Literaturverzeichnis}
     \markboth{Literaturverzeichnis}{}
     \printbibliography[title={Literaturverzeichnis}]
-    
-    \newpage
-    \phantomsection
-    \addcontentsline{toc}{chapter}{Verzeichnis der Anhänge}
-    \listofappendix
-    \newpage
     
     \appendix
     \titleformat{\chapter}{\fontsize{11}{16.5}\bfseries\raggedright}{Anhang \thechapter:}{0.5em}{}
@@ -309,6 +296,7 @@
     \addtocontents{toc}{\protect\renewcommand{\protect\cftchappresnum}{Anhang }}
     \addtocontents{toc}{\protect\renewcommand{\protect\cftchapaftersnum}{: }}
     \addtocontents{toc}{\protect\setlength{\protect\cftchapnumwidth}{5.5em}}
+    
     \input{anhaenge/anhang}
 
     \newpage

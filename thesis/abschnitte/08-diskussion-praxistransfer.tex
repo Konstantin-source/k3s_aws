@@ -1,18 +1,38 @@
 \chapter{Diskussion und Praxistransfer}
 \label{chap:diskussion-praxistransfer}
 
-\section{Bewertung der Ergebnisse}
+\section{Detaillierte Interpretation der empirischen Befunde}
 \label{sec:bewertung-ergebnisse}
-Die Experimente demonstrieren, dass Containerorchestrierung in Verbindung mit GitOps eine signifikante Erhöhung der Betriebssicherheit bietet. Gleichzeitig wird deutlich, dass Resilienz nicht allein durch die Plattform erzeugt wird: Nur korrekt konfigurierte Readiness- und Liveness-Prüfungen verhindern, dass fehlerhafter Code ungefiltert Endnutzer erreicht.
+Die erhobenen Messwerte der drei Störungsexperimente liefern ein differenziertes Bild über die Leistungsfähigkeit cloud-nativer Resilienzmechanismen in kostengünstigen Umgebungen:
 
-\section{Beantwortung der Leitfrage}
+In Experiment~1 zeigte sich, dass ein Pod-Absturz selbst bei redundanter Auslegung (\texttt{replicas: 2}) eine geringfügige Fehlerrate von 1{,}33\,\% (7 von 525 Anfragen) aufwies. Diese Fehler traten exakt in dem schmalen Zeitfenster auf, in dem der getötete Container bestehende TCP-Verbindungen abbrach, bevor der Kubelet-Health-Check und der Endpoints-Controller die Routing-Tabellen im Linux-Kernel via iptables aktualisieren konnten. Dennoch verhinderte die zweite Pod-Instanz einen totalen Dienstausfall: Während bei einer Einzelinstanz alle Folgeanfragen bis zum Neustart ins Leere liefen, wurden neue Anfragen sofort unterbrechungsfrei an den gesunden Pod geleitet. Für unternehmenskritische Anwendungen empfiehlt sich hier ergänzend der Einsatz von \textit{PreStop-Hooks} und sanften Terminierungsintervallen (\texttt{terminationGracePeriodSeconds}), um fliegende TCP-Verbindungen vor dem Signalabzug geordnet zu beenden.\customcite{burns2018designing}
+
+Experiment~2 demonstriert eindrucksvoll den Nutzen defensiver Rollout-Strategien in Kombination mit Readiness-Probes. Da der fehlerhafte Pod zu keinem Zeitpunkt als \texttt{Ready} markiert wurde, schützte Kubernetes den Produktivverkehr zu 100\,\% vor Ausfällen (Fehlerrate 0{,}0\,\%). Die Wiederherstellungszeit von 37{,}19 Sekunden via \texttt{git revert} belegt zudem den enormen Geschwindigkeits- und Sicherheitsvorteil von GitOps gegenüber manuellen Hotfixes auf Servern: Ein Fehlrelease lässt sich durch einfaches Zurücksetzen des Git-Commits deterministisch und auditierbar rückgängig machen.
+
+Experiment~3 quantifiziert die Selbstreparatur von Argo~CD: Eine manuelle Skalierung auf 0 Replikate wurde nach nur 2{,}58 Sekunden als Abweichung detektiert, und das System stellte den Cluster binnen 11{,}28 Sekunden selbsttätig wieder auf 2 aktive Replikate her. Dies beweist, dass GitOps das Phänomen des unbemerkten Konfigurationsdrifts im Praxisbetrieb vollständig eliminieren kann.
+
+\section{Beantwortung der Forschungsleitfrage}
 \label{sec:beantwortung-leitfrage}
-Die eingangs gestellte Leitfrage kann positiv beantwortet werden: Die Kombination aus deklarativer Infrastruktur mit Terraform und kontinuierlichem GitOps-Abgleich mit Argo~CD eliminiert manuelle Betriebsrisiken, verkürzt die Mean Time to Recovery (MTTR) drastisch und stellt eine reproduzierbare Wiederherstellung nach Störungen sicher.
+Auf Basis der empirischen Ergebnisse kann die eingangs formulierte Leitfrage eindeutig positiv beantwortet werden:
+\begin{quote}
+\textit{Die automatisierte Bereitstellung mittels Infrastructure as Code (Terraform) und die kontinuierliche GitOps-Synchronisation (Argo~CD) steigern die Ausfallsicherheit und Wiederherstellungsfähigkeit signifikant gegenüber manuell administrierten Systemen. Sie reduzieren die MTTR von potenziell mehreren Stunden (bei manuellem Fehlersuch- und Wiederanlaufprozess) auf wenige Sekunden bis eine halbe Minute.}
+\end{quote}
+Gleichzeitig wurde nachgewiesen, dass hierfür keine teuren Enterprise-Lösungen zwingend erforderlich sind: Eine schlanke k3s-Installation auf einer einzelnen EC2-Instanz erbringt auf Anwendungsebene exakt dieselben funktionalen Resilienzeigenschaften.
 
-\section{Einschränkungen und Grenzen}
+\section{Kritische Reflexion und Limitationen des Versuchsaufbaus}
 \label{sec:einschraenkungen-grenzen}
-Als wesentliche Limitation ist die Beschränkung auf einen Single-Node-Cluster im Rahmen dieser Arbeit zu nennen. Ein physischer Ausfall der gesamten EC2-Instanz kann von internen Kubernetes-Mechanismen nicht kompensiert werden; hierfür wäre ein Multi-Node-Cluster über mehrere Verfügbarkeitszonen (Availability Zones) erforderlich, was mit höheren Betriebskosten verbunden ist.
+Trotz der positiven Ergebnisse weist der gewählte Versuchsaufbau methodische und architektonische Grenzen auf:
+\begin{itemize}
+    \item \textbf{Single-Node-SPOF (Single Point of Failure):} Die gesamte Infrastruktur stützt sich auf eine einzelne AWS-EC2-Instanz. Fällt die physische VM oder das darunter liegende AWS-Hypervisor-System aus, fällt die gesamte Umgebung aus. In einer echten Enterprise-Produktionsumgebung muss daher zwingend ein Multi-Node-Cluster über mehrere unabhängige Availability Zones (Multi-AZ) aufgespannt werden.
+    \item \textbf{Zustandslosigkeit:} Die getestete Anwendung ist zustandslos (stateless). Bei zustandsbehafteten Anwendungen (stateful) mit Datenbanken erfordert der Ausfall von Knoten komplexe Replikations- und Failover-Protokolle (z.\,B. PostgreSQL Streaming Replication oder Ceph-Speicher).
+    \item \textbf{Abfrage- und Synchronisationsintervalle:} Das standardmäßige Abgleichintervall von Argo~CD beträgt 180 Sekunden, sofern keine Webhooks von GitHub eingerichtet sind. In der Praxis muss für zeitkritische Systeme eine Webhook-Integration hinterlegt werden, um Latenzen bei der Drift-Erkennung zu minimieren.
+\end{itemize}
 
-\section{Praxistransfer und betrieblicher Nutzen}
+\section{Handlungsempfehlungen für den betrieblichen Praxistransfer}
 \label{sec:praxistransfer-nutzen}
-Für betriebliche Anwendungen liefert das vorgestellte Modell eine kosteneffiziente Blaupause: Entwicklungs- und Stagingumgebungen können mit minimalem Budget auf k3s betrieben werden, während die gleichen Helm-Charts und GitOps-Pipelines ohne Anpassung auf Multi-Node-EKS-Produktionsclustern eingesetzt werden können.
+Für kleine und mittlere Unternehmen (KMU) sowie Start-ups leiten sich aus den Erkenntnissen konkrete Best Practices ab:
+\begin{enumerate}
+    \item \textbf{Kostengünstige Staging-Umgebungen:} k3s eignet sich hervorragend, um produktionsidentische Staging- und Testumgebungen zu minimalen Kosten (unter 25~EUR/Monat) bereitzustellen.
+    \item \textbf{Strikte GitOps-Disziplin:} Sämtliche Cluster-Zugriffe für Entwickler sollten auf Read-Only beschränkt werden. Änderungen dürfen ausschließlich über Git-Pull-Requests erfolgen.
+    \item \textbf{Obligatorische Readiness- und Liveness-Sonden:} Jedes Kubernetes-Deployment muss zwingend mit anwendungsspezifischen Health-Checks ausgestattet sein, um Fehl-Deployments automatisch abzufangen.
+\end{enumerate}

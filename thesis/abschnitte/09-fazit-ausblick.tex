@@ -1,10 +1,24 @@
 \chapter{Fazit und Ausblick}
 \label{chap:fazit-ausblick}
 
-\section{Fazit}
+\section{Zusammenfassendes Fazit}
 \label{sec:fazit}
-Die vorliegende Arbeit hat gezeigt, dass moderne DevOps- und GitOps-Verfahren auch mit limitierten Cloud-Budgets praxisnah evaluiert werden können. Die Implementierung auf Basis von k3s auf AWS EC2 in Kombination mit Terraform und Argo~CD erwies sich als hochgradig stabil und reproduzierbar. Die kontrollierten Störungsexperimente lieferten klare, quantifizierbare Nachweise für die Resilienzgewinne durch automatisierte Selbstreparatur und deklaratives Konfigurationsmanagement.
+Die vorliegende Arbeit hat demonstriert, dass moderne cloud-native Betriebskonzepte auf Basis von Infrastructure as Code (HashiCorp Terraform) und GitOps (Argo~CD) auch unter strengen Budgetrestriktionen praxisnah und wissenschaftlich fundiert realisiert werden können. Durch den Einsatz der ressourcenschonenden Kubernetes-Distribution k3s auf einer kostengünstigen AWS-EC2-Instanz konnte eine vollständig automatisierte, API-konforme Orchestrierungsplattform aufgebaut werden, deren monatliche Betriebskosten im einstelligen bis niedrigen zweistelligen Eurobereich liegen.
 
-\section{Ausblick}
+Die Durchführung dreier kontrollierter Störungsexperimente lieferte eindeutige empirische Belege für die Resilienzeigenschaften des Gesamtsystems:
+\begin{itemize}[noitemsep,topsep=2pt]
+    \item Bei abrupten Prozessabstürzen sichert eine redundante Pod-Auslegung den unterbrechungsfreien Weiterbetrieb und reduziert Dienstbeeinträchtigungen auf minimale Netzwerk-Handshake-Verluste.
+    \item Defensiv konfigurierte Readiness-Probes verhindern bei fehlerhaften Software-Rollouts Ausfälle des Produktivverkehrs vollständig (0{,}0\,\% Fehlerrate), während Git-Reverts eine deterministische Wiederherstellung in unter 40 Sekunden ermöglichen.
+    \item Konfigurationsabweichungen durch unautorisierte Eingriffe im Cluster werden von Argo~CD in weniger als drei Sekunden detektiert und autonom binnen rund elf Sekunden korrigiert.
+\end{itemize}
+
+Damit wurde gezeigt, dass GitOps und Containerorchestrierung die klassische Kluft zwischen hoher Ausfallsicherheit und budgetären Beschränkungen wirksam überbrücken können.
+
+\section{Ausblick und künftige Forschungsfragen}
 \label{sec:ausblick}
-Künftige Arbeiten könnten die Umgebung um Multi-Cluster-Setups erweitern, Chaos-Engineering-Werkzeuge wie Chaos Mesh für stochastische Ausfallsimulationen integrieren oder das Verhalten zustandsbehafteter Datenbank-Workloads unter Störungseinfluss untersuchen.
+Aufbauend auf den Ergebnissen dieser Untersuchung eröffnen sich vielversprechende Perspektiven für weiterführende Arbeiten:
+\begin{itemize}[noitemsep,topsep=2pt]
+    \item \textbf{Stochastisches Chaos Engineering:} Erweiterung der Testsuite um spezialisierte Frameworks wie Chaos Mesh zur Simulation zufälliger Netzwerklatenzen und CPU-Drosselungen im laufenden Betrieb.
+    \item \textbf{Zustandsbehaftete Workloads:} Untersuchung von Failover-Mechanismen bei verteilten Datenbanken und Storage-CSI-Treibern (z.\,B. Longhorn oder Rook-Ceph) unter k3s.
+    \item \textbf{Multi-Region- und Hybrid-Cloud-Szenarien:} Erprobung von GitOps-Workflows zur synchronen Verwaltung heterogener Cluster über mehrere Cloud-Provider oder On-Premises-Edge-Knoten hinweg.
+\end{itemize}

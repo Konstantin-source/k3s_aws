@@ -1,33 +1,40 @@
 \chapter{Architektur und Entwurfsentscheidungen}
 \label{chap:architektur-entwurf}
 
-\section{Systemarchitektur im Überblick}
+\section{Gesamtarchitektur und Schichtenmodell}
 \label{sec:systemarchitektur-ueberblick}
-Die Gesamtlösung gliedert sich in drei funktionale Schichten:
-\begin{enumerate}
-    \item \textbf{Infrastrukturschicht (AWS):} Eine Virtuelle Private Cloud (VPC) mit öffentlichen Subnetzen, Internet Gateway, Security Groups sowie einer EC2-Instanz (`t3.small`) mit fest zugewiesener Elastic IP.
-    \item \textbf{Plattformschicht (k3s \& Argo~CD):} k3s stellt die containerbasierte Laufzeitumgebung bereit. Argo~CD überwacht als GitOps-Controller das Anwendungs-Repository.
-    \item \textbf{Anwendungsschicht (Resilience Lab):} Eine zustandslose Webanwendung, bestehend aus REST-API, Statusoberfläche und geschütztem Fehlerinduktionsmodul, strukturiert über Kustomize.
+Die Architektur der Gesamtlösung wurde nach den Richtlinien des AWS Well-Architected Frameworks (Reliability Pillar) entworfen und gliedert sich in drei klar voneinander abgegrenzte funktionale Schichten:\customcite{aws_reliability_2025}
+\begin{enumerate}[noitemsep,topsep=2pt]
+    \item \textbf{Infrastrukturschicht (AWS):} Bildet das cloud-basierte Netzwerk- und Rechenfundament. Eine dedizierte Virtual Private Cloud (VPC, CIDR \texttt{10.0.0.0/16}) kapselt die Umgebung ab. Ein öffentliches Subnetz (\texttt{10.0.1.0/24}) in der Region Frankfurt (\texttt{eu-central-1}) ist über ein Internet Gateway angebunden. Eine EC2-Instanz des Typs \texttt{t3.small} (2 vCPUs, 2~GB RAM, 20~GB gp3-SSD) stellt die Rechenleistung bereit. Eine statische Elastic IP sichert die persistente Erreichbarkeit über Instanzneustarts hinweg.
+    \item \textbf{Plattformschicht (k3s \& Argo~CD):} k3s stellt die CNCF-zertifizierte Kubernetes-Laufzeitumgebung bereit. Alle Control-Plane- und Worker-Komponenten laufen ressourceneffizient auf dem Knoten. Als GitOps-Controller ist Argo~CD im Namespace \texttt{argocd} installiert und überwacht das GitHub-Repository.
+    \item \textbf{An\-wen\-dungs\-schicht (Resilience Lab):} Beherbergt die modularisierte Demo-Webanwendung, bestehend aus der zustandslosen REST-API, einem dynamischen Web-Dashboard und geschützten Endpunkten zur Fehlerinduktion.
 \end{enumerate}
 
-\section{Wahl von k3s gegenüber Amazon EKS}
+\section{Wirtschaftliche und technische Bewertung: k3s gegenüber Amazon EKS}
 \label{sec:wahl-k3s-vs-eks}
-Ein zentraler Entwurfsaspekt betrifft das Verhältnis von Betriebskosten und Funktionalität. Während Amazon EKS eine verwaltete Control Plane bietet, entstehen hierfür fixe Basiskosten von ca. 72~USD pro Monat allein für den Cluster-Endpunkt, zuzüglich Worker Nodes und Load Balancern (Gesamtkosten ca. 180~USD/Monat). 
-
-k3s auf einer `t3.small`-Instanz bietet bei monatlichen Kosten von ca. 22~USD die volle Kubernetes-API-Kompatibilität. Da die geplanten Resilienzuntersuchungen auf Pod- und Deployment-Ebene stattfinden, bietet k3s dieselbe Aussagekraft bei einem Bruchteil der Kosten.
-
-\section{Zuständigkeitsabgrenzung Terraform und Argo~CD}
-\label{sec:zustaendigkeit-terraform-argocd}
-Um Konflikte durch konkurrierende Controller zu vermeiden, gilt ein striktes Separationsprinzip:
-\begin{itemize}
-    \item \textbf{Terraform} verwaltet ausschließlich Cloud-Ressourcen (VPC, EC2, Security Groups) und initiiert den einmaligen k3s- und Argo-CD-Bootstrap via Cloud-Init.
-    \item \textbf{Argo~CD} verwaltet alle Kubernetes-Anwendungsressourcen (Deployments, Services, Ingress). Terraform greift nach dem Bootstrap nicht mehr modifizierend in Anwendungsmanifeste ein.
+Ein zentraler architektonischer Entwurfsentscheid betrifft die Auswahl der Kubernetes-Plattform. Enterprise-Umgebungen greifen häufig standardmäßig auf Amazon Elastic Kubernetes Service (EKS) zurück. Für Entwicklungs-, Staging- oder universitäre Forschungsumgebungen weist EKS jedoch ein ungünstiges Kosten-Nutzen-Verhältnis auf:
+\begin{itemize}[noitemsep,topsep=2pt]
+    \item \textbf{Amazon EKS:} Allein für die Bereitstellung des EKS-Cluster-Endpunkts fallen feste Basiskosten von 0{,}10~USD pro Stunde (ca. 73~USD/Monat) an. Für Worker-Nodes (mindestens zwei \texttt{t3.medium}-Instanzen für Hochverfügbarkeit der Control Plane), einen AWS Application Load Balancer (ca. 22~USD/Monat) und NAT-Gateways belaufen sich die monatlichen Gesamtkosten auf über 180 bis 220~USD.
+    \item \textbf{k3s auf EC2 (\textnormal{t3.small}):} Die Nutzung einer einzelnen reservierten oder On-Demand-\texttt{t3.small}-Instanz verursacht lediglich ca. 0{,}026~USD pro Stunde (ca. 19~USD/Monat). Der integrierte Traefik-Ingress-Controller erfordert keinen teuren AWS-Load-Balancer, sondern bindet direkt an die Ports 80 und 443 der Elastic IP.
 \end{itemize}
 
-\section{Kustomize zur Manifestverwaltung}
-\label{sec:kustomize-manifestverwaltung}
-Die Kubernetes-Konfiguration wird mittels Kustomize verwaltet. Im Vergleich zu Helm verzichtet Kustomize auf eine eigene Template-Sprache und arbeitet deklarativ mit Plain-YAML-Manifesten. Über ein Base-Overlay-Prinzip werden gemeinsame Ressourcen in einer Basis (\texttt{base}) definiert und umgebungsspezifische Anpassungen (\texttt{overlays/local} für lokale Cluster, \texttt{overlays/aws} für k3s mit Traefik-Ingress) per Patch überlagert. Dies reduziert Redundanz, vermeidet Template-Fehler und ist nativ in \texttt{kubectl} sowie Argo~CD integriert.
+Da die in dieser Arbeit zu evaluierenden Mechanismen (Prozessneustarts, Readiness-Gating und GitOps-Self-Heal) auf Pod-, Service- und Ingress-Ebene innerhalb der standardisierten Kubernetes-API operieren, liefert das k3s-Setup identische empirische Erkenntnisse bei einer Kostenreduktion von ca. 90\,\%.
 
-\section{Lokale Entwicklungsumgebung und Cloud-Umgebung}
-\label{sec:lokal-vs-cloud}
-Um Cloud-Kosten zu minimieren, wird der Entwicklungszyklus lokal vorangetrieben (Containerisierung mit Docker, lokale Validierung). AWS dient gezielt der Durchführung und Validierung der definierten Experimente unter realistischen Netzwerkbedingungen.
+\section{Zuständigkeitsabgrenzung: Terraform und Argo~CD}
+\label{sec:zustaendigkeit-terraform-argocd}
+Um konkurrierende Schreibzugriffe und Race Conditions zwischen verschiedenen Automatisierungswerkzeugen zu verhindern, folgt die Architektur einem strikten Separationsprinzip:
+\begin{itemize}[noitemsep,topsep=2pt]
+    \item \textbf{Terraform (Day-0-Infrastruktur):} Verantwortlich ausschließlich für das Provisionieren der Cloud-Ressourcen (VPC, Subnetze, Routing, Security Groups, EC2, Elastic IP) sowie für das einmalige Bootstrappen des Betriebssystems via Cloud-Init. Nach erfolgreichem Aufsetzen von k3s und Argo~CD verbleibt der Terraform-State unverändert.
+    \item \textbf{Argo~CD (Day-2-Anwendungsbetrieb):} Übernimmt ab dem Bootstrap die alleinige Verantwortung für alle Kubernetes-Ressourcen im Cluster. Weder Entwickler noch CI-Systeme greifen mit imperativen \texttt{kubectl}-Befehlen modifizierend in die Produktivumgebung ein.
+\end{itemize}
+
+\section{Manifest-Strukturierung mit Kustomize und Workflow-Trennung}
+\label{sec:kustomize-manifestverwaltung}
+Für die Konfigurationsverwaltung wird Kustomize eingesetzt. Im Gegensatz zu Helm, das komplexe Go-Templates und Tiller-artige Paketierungen verwendet, verfolgt Kustomize einen rein deklarativen Ansatz (Plain YAML). Es nutzt ein hierarchisches Base-Overlay-Muster:
+\begin{itemize}[noitemsep,topsep=2pt]
+    \item \texttt{kustomize/base}: Definiert den kanonischen Minimalzustand der Anwendung (Deployment mit Standard-Labels, Container-Port 8000, Liveness- und Readiness-Probes sowie ein ClusterIP-Service).
+    \item \texttt{kustomize/overlays/local}: Patcht die Konfiguration für lokale Entwicklungscluster (z.\,B. NodePort 30080 und lokales Image-Pulling).
+    \item \texttt{kustomize/overlays/aws}: Erhöht die Replika-Zahl auf 2 für Resilienzprüfungen, setzt Produktions-Image-Tags aus der GitHub Container Registry und fügt ein Ingress-Objekt für den Traefik-Controller hinzu.
+\end{itemize}
+
+Um das Cloud-Budget optimal zu schonen, wird der Entwicklungszyklus lokal vorangetrieben: Container-Builds und Kustomize-Validierungen erfolgen lokal auf Entwicklungsrechnern. Die AWS-Infrastruktur wird gezielt und automatisiert über Terraform erst dann hochgefahren, wenn die Experimente unter realen Netzwerkbedingungen evaluiert werden.

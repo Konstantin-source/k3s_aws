@@ -1,48 +1,93 @@
-\chapter{Praktische Hinweise zum Gendern}
-\appendixentry{Praktische Hinweise zum Gendern}
-\label{app:gendern}
+\chapter{Messprotokolle und Rohdaten der Störungsexperimente}
+\appendixentry{Messprotokolle und Rohdaten der Störungsexperimente}
+\label{app:messprotokolle}
 
-Eine häufig verwendete Möglichkeit ist das substantivierte Partizip Präsens. Es zeigt im Plural kein Genus:
-\begin{itemize}
-\item die Studierenden,
-\item die Lehrenden.
-\end{itemize}
+In diesem Anhang sind die maschinenlesbaren Konfigurationen, Ausführungsbefehle und Rohdatenprotokolle der drei durchgeführten Störungsexperimente dokumentiert.
 
-Bitte beachten Sie, dass das substantivierte Partizip Präsens im Singular ein Genus zeigt:
-\begin{itemize}
-\item der Studierende ist eindeutig maskulin,
-\item die Lehrende ist eindeutig feminin.
-\end{itemize}
+\section{Experiment 1: Prozessabsturz und Redundanzvergleich}
+\label{app:exp1-daten}
+Zur Durchführung des Last- und Störungstests wurde das nachfolgende Python-Kommando ausgeführt. Es sendet kontinuierlich 15 Anfragen pro Sekunde und induziert bei Sekunde 12 über den Labor-Endpunkt einen Prozessabsturz:
+\begin{lstlisting}[language=bash, caption={Ausführungsbefehl zu Experiment 1}]
+python experiments/exp1_crash_test.py \
+  --url http://63.176.27.134/api/info \
+  --crash-url http://63.176.27.134/lab/crash \
+  --rps 15 --duration 35 --crash-at 12 \
+  --output experiments/results/exp1-crash.json
+\end{lstlisting}
 
-Abstrakte Rollenbezeichnungen und Begriffe für Kollektive, Institutionen und Positionen sind eine weitere Möglichkeit für sexusindifferente Formulierungen:
-\begin{itemize}
-\item die Vertretung,
-\item die Studiengangsleitung,
-\item das Kollegium,
-\item das Publikum,
-\item die Lehrkräfte,
-\item das Team,
-\item das Präsidium.
-\end{itemize}
+\begin{lstlisting}[language=json, caption={Rohdatenprotokoll exp1-crash.json}, basicstyle=\fontsize{8}{10}\ttfamily]
+{
+  "experiment": "Experiment 1 - Prozessabsturz (1 Pod vs 2 Pods)",
+  "timestamp_iso": "2026-10-01T08:03:02.928566+00:00",
+  "git_commit": "9a3468f",
+  "comparison": {
+    "single_replica_baseline": {
+      "total_requests": 525,
+      "successful_requests": 517,
+      "failed_requests": 8,
+      "error_rate_percent": 1.52,
+      "latency_p50_ms": 50.75,
+      "latency_p95_ms": 162.06
+    },
+    "multi_replica_improved": {
+      "total_requests": 525,
+      "successful_requests": 518,
+      "failed_requests": 7,
+      "error_rate_percent": 1.33,
+      "latency_p50_ms": 55.2,
+      "latency_p95_ms": 159.81
+    }
+  }
+}
+\end{lstlisting}
 
-Die Pronomina alle und niemand zeigen ebenfalls kein Genus:
-\begin{itemize}
-\item Alle können am Kurs teilnehmen.
-\item Niemand muss sich wegen der Prüfung Sorgen machen.
-\end{itemize}
+\section{Experiment 2: Fehlerhaftes Release und Git-Revert}
+\label{app:exp2-daten}
+Das nachfolgende Testskript simulierte ein fehlerhaftes Release mit fehlschlagender Readiness-Sonde und maß die Latenzen sowie die Wiederherstellungsdauer nach einem automatisierten \texttt{git revert}:
+\begin{lstlisting}[language=bash, caption={Ausführungsbefehl zu Experiment 2}]
+python experiments/exp2_bad_deploy.py \
+  --repo-dir . \
+  --service-url http://63.176.27.134/api/info \
+  --output experiments/results/exp2-bad-deploy.json
+\end{lstlisting}
 
-Gender-Zeichen, meist ein Doppelpunkt oder Sternchen (Asterisk), stehen zwischen dem Wortstamm der männlichen Form und der weiblichen Endung:
-\begin{itemize}
-\item Bewerber:in
-\item Teilnehmer:innen
-\item Student:in
-\item Expert:innen
-\end{itemize}
+\begin{lstlisting}[language=json, caption={Rohdatenprotokoll exp2-bad-deploy.json}, basicstyle=\fontsize{8}{10}\ttfamily]
+{
+  "experiment": "Experiment 2 - Fehlerhaftes Deployment und Git Revert",
+  "timestamp_iso": "2026-10-01T08:04:58.168213+00:00",
+  "commits": {
+    "initial": "9a3468f11285c955a17e6980c57aeeef63274a73",
+    "revert": "2d34aca6a4759d14acaf2d2af6c43ff1145ed189"
+  },
+  "traffic_during_bad_rollout": {
+    "total_requests": 200,
+    "successful_requests": 200,
+    "failed_requests": 0,
+    "error_rate_percent": 0.0
+  },
+  "recovery_time_seconds": 37.19
+}
+\end{lstlisting}
 
-Die Beidnennung ist eine weitere Möglichkeit, also die Nennung von maskulinen und femininen Bezeichnungen:
-\begin{itemize}
-\item Studentinnen und Studenten,
-\item Dozentinnen und Dozenten,
-\item Prüferin bzw. Prüfer,
-\item Expertin bzw. Experte.
-\end{itemize}
+\section{Experiment 3: Konfigurationsdrift und Argo-CD-Self-Heal}
+\label{app:exp3-daten}
+Das Überwachungsskript skalierte das Deployment imperativ auf 0 Replikate und stoppte die Zeitspanne bis zur automatischen Selbstreparatur durch Argo~CD:
+\begin{lstlisting}[language=bash, caption={Ausführungsbefehl zu Experiment 3}]
+python experiments/exp3_config_drift.py \
+  --deployment resilience-lab \
+  --namespace default \
+  --app-name resilience-lab \
+  --output experiments/results/exp3-config-drift.json
+\end{lstlisting}
+
+\begin{lstlisting}[language=json, caption={Rohdatenprotokoll exp3-config-drift.json}, basicstyle=\fontsize{8}{10}\ttfamily]
+{
+  "experiment": "Experiment 3 - Konfigurationsabweichung und Self-Heal",
+  "git_commit": "07a858dac10fe5e76bec13440a743e7a9331bd21",
+  "metrics": {
+    "detection_duration_seconds": 2.58,
+    "total_recovery_duration_seconds": 11.28,
+    "success": true
+  }
+}
+\end{lstlisting}

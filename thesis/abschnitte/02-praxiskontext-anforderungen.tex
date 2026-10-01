@@ -1,20 +1,34 @@
 \chapter{Praktischer Kontext und Anforderungen}
 \label{chap:praxiskontext-anforderungen}
 
-\section{Betrieblicher Hintergrund}
+\section{Betrieblicher Hintergrund und Anwendungsszenario}
 \label{sec:betrieblicher-hintergrund}
-In betrieblichen IT-Landschaften nehmen Webservices und Microservices eine zentrale Rolle ein. Ein typisches Szenario stellt die automatisierte Auftrags- und Bestellverarbeitung (Order Processing API) dar, bei der Clients Aufträge einreichen, Statusabfragen durchführen und asynchrone Folgeprozesse angestoßen werden. Dienstunterbrechungen führen in solchen Systemen unmittelbar zu wirtschaftlichen Einbußen und Reputationsverlust.
+In modernen betrieblichen IT-Landschaften nehmen synchrone und asynchrone Microservices eine zentrale Rolle bei der Abwicklung geschäftskritischer Transaktionen ein.\customcite{richardson2018microservices} Ein repräsentatives und weit verbreitetes Einsatzszenario stellt die automatisierte Auftrags- und Bestellverarbeitung (Order Processing API) im E-Commerce und in der Logistik dar: Externe Clients oder Frontends reichen Kaufaufträge ein, fragen fortlaufend Bearbeitungsstände ab und stoßen nachgelagerte Zahlungs- und Versandprozesse an.
 
-\section{Anforderungen an die Betriebsumgebung}
+Dienstunterbrechungen oder Latenzspitzen in dieser Schnittstelle führen unmittelbar zu abgebrochenen Transaktionen, wirtschaftlichen Einbußen und nachhaltigem Vertrauensverlust bei Kunden und Partnern. Gemäß den Prinzipien des Site Reliability Engineering (SRE) definieren Unternehmen daher Service Level Objectives (SLOs), beispielsweise eine Verfügbarkeit von mindestens 99{,}9\,\% (entsprechend einer maximalen Ausfallzeit von unter 44 Minuten pro Monat) sowie eine strikte Begrenzung von Antwortzeiten auf unter 200 Millisekunden im 95.\,Perzentil ($p_{95}$).\customcite{beyer2016site}
+
+\section{Typische betriebliche Störungs- und Fehlermuster}
+\label{sec:stoerungsmuster}
+Bei der Analyse realer Betriebsstörungen in verteilten Umgebungen lassen sich drei wiederkehrende Fehlermuster identifizieren, die den Anstoß für die in dieser Arbeit durchgeführten Evaluationen bilden:
+\begin{enumerate}
+    \item \textbf{Plötzliche Prozessabstürze (Process Crashes):} Unbehandelte Ausnahmen (Unhandled Exceptions), Speichererschöpfungen (Out-of-Memory / OOM-Kills) oder Deadlocks beenden Anwendungsprozesse abrupt. Ohne automatisierte Prozessüberwachung und Ersatzinstanzen bleibt der Dienst bis zum manuellen Eingriff eines Administrators offline.
+    \item \textbf{Fehlerhafte Release-Rollouts (Bad Deployments):} Fehlerhafter Anwendungscode oder inkompatible Abhängigkeiten werden in Produktion überführt. Kann der Container zwar starten, aber keine Anfragen bedienen (z.\,B. aufgrund fehlgeschlagener Datenbankverbindungen), führt ein unkontrolliertes Ersetzen gesunder Instanzen zum Totalausfall.
+    \item \textbf{Konfigurationsabweichungen (Configuration Drift):} Im Zuge von akuten Störungsbehebungen (Firefighting) führen Administratoren manuelle Änderungen direkt auf Cluster-Ebene via Befehlszeile durch (z.\,B. Verändern von Umgebungsvariablen oder Replika-Zahlen). Diese Änderungen sind nicht versionskontrolliert, überschreiben den Soll-Zustand unbemerkt und erschweren spätere Rollouts massiv.
+\end{enumerate}
+
+\section{Anforderungsdefinition an die Zielumgebung}
 \label{sec:anforderungen-betriebsumgebung}
-Aus dem betrieblichen Szenario leiten sich spezifische funktionale und nicht-funktionale Anforderungen an die Plattform ab:
+Aus dem betrieblichen Nutzungskontext und den identifizierten Fehlermustern leiten sich strukturierte funktionale (FA) und nicht-funktionale Anforderungen (NFA) an die zu entwickelnde Plattform ab:
+
 \begin{itemize}
-    \item \textbf{Reproduzierbarkeit:} Die gesamte Infrastruktur muss als Code versioniert und mit minimalem manuellem Eingriff reproduzierbar aufgebaut und zerstört werden können.
-    \item \textbf{Transparenz des Systemzustands:} Aktuelle Versionen, Pod-Identitäten und Antwortzeiten müssen für Monitoring und Fehlersuche unmittelbar ersichtlich sein.
-    \item \textbf{Fehlertoleranz:} Einzelne Instanzausfälle dürfen nicht zur Nicht-Erreichbarkeit des Gesamtsystems führen.
-    \item \textbf{Kosteneffizienz:} Der Betrieb muss innerhalb eines strikten Budgets (unter 30~EUR pro Monat) realisierbar sein.
+    \item \textbf{FA-1 (Automatisierte Fehlererkennung und Heilung):} Das System muss den Ausfall einzelner Pod-Instanzen selbsttätig erkennen, fehlerhafte Prozesse terminieren und Ersatzinstanzen bereitstellen, ohne dass ein manueller Eingriff erforderlich ist.
+    \item \textbf{FA-2 (Schutz vor fehlerhaften Rollouts):} Neue Anwendungsversionen dürfen erst dann Produktivverkehr erhalten, wenn eine erfolgreiche Bereitschaftsprüfung (Readiness Probe) stattgefunden hat. Schlägt diese fehl, muss das Rollout selbsttätig pausieren.
+    \item \textbf{FA-3 (Automatischer Konfigurationsabgleich):} Manuell induzierte Zustandsabweichungen im Cluster müssen innerhalb eines definierten Zeitfensters (unter 60 Sekunden) erkannt und auf den im Git deklarierten Sollzustand zurückgeführt werden.
+    \item \textbf{NFA-1 (Vollständige Reproduzierbarkeit / IaC):} Die gesamte Infrastruktur (VPC, Instanzen, Firewall-Regeln, Kubernetes-Konfiguration) muss versioniert in Code beschrieben sein und sich per Knopfdruck idempotent aufbauen und abbauen lassen.
+    \item \textbf{NFA-2 (Kosteneffizienz):} Die monatlichen Gesamtkosten der Cloud-Infrastruktur müssen unter 30~EUR liegen, um den Betrieb auch in budgetlimitierten Projekten und Entwicklungsumgebungen zu ermöglichen.
+    \item \textbf{NFA-3 (Beobachtbarkeit und Transparenz):} Die Plattform muss transparente Schnittstellen bereitstellen, um aktuelle Pod-Identitäten, Antwortzeiten und Systemzustände für Mess- und Auswertungszwecke in Echtzeit offenzulegen.
 \end{itemize}
 
-\section{Anforderungen an den Praxistransfer}
+\section{Anforderungen an den wissenschaftlichen Praxistransfer}
 \label{sec:anforderungen-praxistransfer}
-Der Praxistransfer erfordert, dass die im Rahmen dieser Arbeit gewonnenen Erkenntnisse und Implementierungsmuster generalisierbar und direkt auf vergleichbare betriebliche Anwendungen übertragbar sind. Die gewählten Mechanismen (Health Checks, GitOps-Sync, Terraform-Module) dürfen keine proprietären Abhängigkeiten erzeugen, die einen Transfer in reguläre Unternehmensumgebungen verhindern.
+Um einen nachhaltigen wissenschaftlichen und praktischen Mehrwert zu generieren, dürfen die eingesetzten Werkzeuge und Architekturmuster keine proprietären Sonderlösungen darstellen. Alle Komponenten müssen auf offenen Standards (Open Container Initiative, Kubernetes-API, OpenGitOps) basieren, sodass die erarbeiteten Resilienzkonzepte und Messverfahren ohne Anpassungen auf unternehmensweite Produktivumgebungen übertragbar sind.

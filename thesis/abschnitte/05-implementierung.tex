@@ -1,39 +1,44 @@
 \chapter{Implementierung}
 \label{chap:implementierung}
 
-\section{Demo-Anwendung (Resilience Lab)}
+\section{Die Testanwendung „Resilience Lab“}
 \label{sec:demo-anwendung}
-Die Webanwendung wird auf Basis von Python (FastAPI) implementiert. Sie stellt Kernendpunkte für den regulären Betrieb sowie dedizierte Schnittstellen zur Fehlerinduktion bereit:
+Als Referenz-Workload dient eine in Python mit dem modernen Web-Framework FastAPI implementierte Webanwendung. FastAPI wurde gewählt, da es asynchrone Anfragen via \texttt{asyncio} nativ unterstützt, eine minimale Latenz aufweist und OpenAPI-Spezifikationen automatisch bereitstellt. Die Anwendung gliedert sich in operative Betriebsendpunkte und experimentelle Steuerungsrouten:
 \begin{itemize}
-    \item \texttt{GET /}: Übersichtliche HTML-Statusseite mit Anzeige von Pod-Name, Anwendungsversion, Node-IP und Systemzeit.
-    \item \texttt{GET /health/live}: Liveness-Prüfung zur Erkennung interner Deadlocks.
-    \item \texttt{GET /health/ready}: Readiness-Prüfung zur Steuerung der Service-Teilnahme.
-    \item \texttt{POST /lab/crash}: Forcierter Programmabsturz via \texttt{os.\_exit(1)}.
-    \item \texttt{POST /lab/toggle-ready}: Umschaltung der Bereitschaft für kontrollierte Traffic-Aussteuerungen.
+    \item \texttt{GET /}: Liefert eine responsive HTML-Oberfläche aus, die Statusinformationen (aktueller Hostname/Pod-Name, Pod-IP-Adresse, Version und Serverzeit) visualisiert und per JavaScript alle 1{,}5 Sekunden aktualisiert.
+    \item \texttt{GET /api/info}: Liefert dieselben Zustandsdaten im maschinenlesbaren JSON-Format für automatisierte Last- und Monitoring-Skripte.
+    \item \texttt{GET /health/live}: Antwortet standardmäßig mit HTTP 200 (\texttt{\{"status": "alive"\}}). Dient der Liveness-Sonde des Kubelets zur Erkennung von Deadlocks.
+    \item \texttt{GET /health/ready}: Gibt Aufschluss über die Betriebsbereitschaft. Über einen internen atomaren Zustandsschalter kann der Status gesteuert werden.
+    \item \texttt{POST /lab/crash}: Forciert das sofortige Beenden des gesamten Python-Prozesses durch direkten Aufruf von \texttt{os.\_exit(1)}. Dieser harte Systemaufruf umgeht normale Ausnahmebehandlungen (Exception Handlers) und simuliert einen abrupten SIGKILL-Absturz.
+    \item \texttt{POST /lab/toggle-ready}: Schaltet die Rückgabe der Readiness-Prüfung zwischen HTTP 200 und HTTP 503 um, um die dynamische Aussteuerung aus dem Service-Routing zu verifizieren.
 \end{itemize}
 
-\section{Terraform-Konfiguration und k3s-Bootstrap}
+\section{Containerisierung und Sicherheits-Härtung}
+\label{sec:containerisierung-haertung}
+Das Container-Image wird über ein mehrstufiges Dockerfile auf Basis des minimalen Basis-Images \texttt{python:3.11-slim} erzeugt. Zur Härtung gegen Privilege-Escalation-Angriffe wird die Anwendung nicht unter dem standardmäßigen Root-Benutzer ausgeführt: Im Dockerfile wird ein unprivilegierter Systembenutzer \texttt{appuser} (UID 10001) angelegt, dem die Eigentumsrechte am Arbeitsverzeichnis zugewiesen werden. Der Containerprozess startet mit \texttt{USER appuser}. Zusätzlich wird im Container ein nativer \texttt{HEALTHCHECK}-Befehl definiert, der die Liveness-Route über \texttt{curl} zyklisch abfragt.
+
+\section{AWS-Infrastrukturautomatisierung mit Terraform}
 \label{sec:terraform-k3s-bootstrap}
-Die AWS-Infrastruktur wird über modulare Terraform-Dateien beschrieben:
+Die Cloud-Infrastruktur wird über modulare Terraform-Dateien beschrieben:
 \begin{itemize}
-    \item \texttt{vpc.tf}: Definiert VPC, Subnetze, Internet Gateway und Routing-Tabellen.
-    \item \texttt{security-groups.tf}: Konfiguriert Inbound-Regeln für SSH (Port 22), HTTP/HTTPS (Port 80/443) und die Kubernetes-API (Port 6443).
-    \item \texttt{ec2.tf}: Instanziiert die VM unter Verwendung eines \texttt{cloud-init}-Skripts, welches k3s und Argo~CD installiert und das Kubeconfig-Zertifikat mit der öffentlichen IP ausstellt.
+    \item \texttt{vpc.tf}: Erzeugt die VPC \texttt{k3s-vpc} (\texttt{10.0.0.0/16}), das öffentliche Subnetz (\texttt{10.0.1.0/24}), das Internet Gateway sowie die zugehörige Routing-Tabelle mit einer Default-Route (\texttt{0.0.0.0/0}).
+    \item \texttt{security-groups.tf}: Definiert Firewall-Regeln nach dem Prinzip der geringsten Rechte (Least Privilege). Erlaubt sind Inbound-Verbindungen für SSH (Port 22), HTTP/HTTPS (Port 80/443 für den Traefik-Ingress) sowie Port 6443 für die gesicherte Kubernetes-API.
+    \item \texttt{ec2.tf}: Instanziiert die \texttt{t3.small}-Instanz auf Basis eines aktuellen Ubuntu 24.04 LTS AMIs und verknüpft eine Elastic IP.
 \end{itemize}
 
-\section{Kubernetes-Manifeste mit Kustomize}
-\label{sec:k8s-manifeste-kustomize}
-Die Anwendungsbereitstellung wird über eine strukturierte Kustomize-Hierarchie realisiert:
+Der eigentliche Software-Bootstrap erfolgt vollautomatisiert über ein \texttt{cloud-init}-Shell-Skript in den EC2-User-Data:
+Das Skript installiert k3s mit dem Parameter \texttt{-{}-tls-san=\allowbreak\$\{aws\_eip.\allowbreak k3s.\allowbreak public\_ip\}}, damit das von k3s generierte TLS-Zertifikat der API die öffentliche Elastic IP als gültigen Subject Alternative Name akzeptiert. Anschließend wird das Kubeconfig extrahiert, Argo~CD im Namespace \texttt{argocd} via Manifest-Download installiert und die Argo-CD-Application CRD auf den Cluster angewendet.
+
+\section{Kustomize-Deklaration und GitOps-Verknüpfung}
+\label{sec:kustomize-manifeste}
+Die Anwendungsmanifeste unter \texttt{kustomize/} sind modular strukturiert:
 \begin{itemize}
-    \item \texttt{kustomize/base}: Beinhaltet Basis-Manifeste für Deployment und Service mit Standardwerten (1 Replikat, Ressourcenlimits, Health Probes).
-    \item \texttt{kustomize/overlays/local}: Patcht den Service auf \texttt{NodePort} 30080 und nutzt lokale Container-Images für Entwicklungszwecke.
-    \item \texttt{kustomize/overlays/aws}: Skaliert das Deployment auf 2 Replikate für Resilienztests und fügt ein Ingress-Manifest für den k3s-integrierten Traefik-Controller hinzu.
+    \item \texttt{kustomize/base/deployment.yaml}: Deklariert das Deployment mit expliziten CPU- und Memory-Limits (50m CPU Request / 200m Limit; 64Mi Memory Request / 128Mi Limit) sowie feingranularen Probe-Timings (\texttt{initialDelaySeconds:\allowbreak{} 2}, \texttt{periodSeconds:\allowbreak{} 2}, \texttt{failureThreshold:\allowbreak{} 2}).
+    \item \texttt{kustomize/overlays/aws/}: Erhöht über einen strategischen Merge-Patch die Replika-Zahl auf \texttt{replicas: 2}, setzt das Produktions-Image \texttt{ghcr.io/\allowbreak{}konstantin-source/\allowbreak{}k3s\_aws:latest} und bindet eine Ingress-Ressource für den Traefik-Controller ein.
 \end{itemize}
 
-\section{Argo-CD-Anbindung und GitOps-Workflow}
-\label{sec:argocd-anbindung}
-Die Bereitstellung der Anwendung erfolgt über eine Argo-CD-Application-CRD. Argo~CD überwacht das Git-Repository auf dem Pfad \texttt{kustomize/overlays/aws} und synchronisiert den Zustand automatisiert (\textit{Automated Sync} \& \textit{Self-Heal}).
+Die Synchronisation übernimmt die in \texttt{argocd/application.yaml} deklarierte Argo-CD-Application. Sie verweist auf das Git-Repository und den Pfad \texttt{kustomize/overlays/aws}. In den Sync-Optionen sind \texttt{automated.prune: true} und \texttt{automated.selfHeal: true} hinterlegt, sodass gelöschte oder abweichende Ressourcen im Cluster ohne Verzögerung korrigiert werden.
 
-\section{CI-Pipeline mit GitHub Actions}
+\section{Continuous Integration mit GitHub Actions}
 \label{sec:ci-pipeline}
-Eine GitHub-Actions-Pipeline automatisiert den Integrationsprozess: Bei Änderungen am Anwendungscode werden automatisierte Tests ausgeführt, ein Container-Image gebaut und in die GitHub Container Registry (\texttt{ghcr.io}) übertragen.
+Eine GitHub-Actions-Pipeline (\path{.github/workflows/deploy.yml}) automatisiert den Entwicklungs- und Auslieferungsworkflow: Bei jedem Push auf den Branch \texttt{main} führt der GitHub-Runner Unit-Tests aus, baut das Dockerfile unter Verwendung des GitHub Actions Docker Cache und pusht das getaggte Image in die GitHub Container Registry (\texttt{ghcr.io}).

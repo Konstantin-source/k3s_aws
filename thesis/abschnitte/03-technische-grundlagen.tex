@@ -1,27 +1,48 @@
 \chapter{Technische Grundlagen}
 \label{chap:technische-grundlagen}
 
-\section{Container und Kubernetes}
+\section{Container-Virtualisierung und Kubernetes}
 \label{sec:container-kubernetes}
-Containerisierung ermöglicht die Kapselung einer Anwendung inklusive ihrer Laufzeitumgebung und Abhängigkeiten. Kubernetes fungiert als deklarative Orchestrierungsplattform zur Automatisierung von Bereitstellung, Skalierung und Betrieb containerisierter Workloads. Zentrale Konstrukte sind \textit{Pods} als kleinste ausführbare Einheiten, \textit{Deployments} zur Verwaltung des Lebenszyklus und von Rollouts sowie \textit{Services} zur internen und externen Lastverteilung.
+Containerisierung ermöglicht die leichtgewichtige Kapselung von Anwendungen mitsamt ihren Systembibliotheken, Laufzeitumgebungen und Konfigurationen in standardisierten Einheiten auf Basis der Open Container Initiative (OCI). Im Vergleich zu klassischen virtuellen Maschinen teilen sich Container den Linux-Kernel des Host-Systems über Kernel-Features wie \textit{cgroups} (Ressourcenlimitierung) und \textit{namespaces} (Prozessisolation), was zu minimalem Overhead und sekundenschnellen Startzeiten führt.\customcite{burns2018designing}
+
+Kubernetes (K8s) fungiert als deklarative Open-Source-Plattform zur Automatisierung von Bereitstellung, Skalierung und Betrieb containerisierter Workloads in verteilten Rechenknoten.\customcite{hightower2022kubernetes} Das System basiert auf kontinuierlichen Steuerungs- und Abgleichschleifen (Reconciliation Loops), die fortlaufend den Ist-Zustand (Actual State) über die Kubernetes-API erfassen und an den deklarierten Soll-Zustand (Desired State) anpassen. Die zentralen Ressourcenobjekte umfassen:
+\begin{itemize}
+    \item \textbf{Pods:} Die kleinste unteilbare Ausführungseinheit in Kubernetes, bestehend aus einem oder mehreren eng gekoppelten Containern, die sich Netzwerk-Namespace (IP-Adresse und Ports) und Speicher-Volumes teilen.
+    \item \textbf{Deployments \& ReplicaSets:} Controller-Objekte zur Gewährleistung einer definierten Anzahl identischer Pod-Instanzen sowie zur Steuerung zustandsloser Rollouts und Rollbacks.
+    \item \textbf{Services:} Abstraktionen zur Bereitstellung stabiler virtueller IP-Adressen und DNS-Namen, die eingehende Anfragen über iptables- oder IPVS-Regeln automatisch auf gesunde Pod-Endpunkte verteilen.
+\end{itemize}
 
 \section{k3s als leichtgewichtige Kubernetes-Distribution}
 \label{sec:k3s-grundlagen}
-k3s ist eine von der Cloud Native Computing Foundation (CNCF) zertifizierte, leichtgewichtige Kubernetes-Distribution. Durch die Bündelung aller Kubernetes-Komponenten in einer einzelnen Binärdatei und den Ersatz des speicherintensiven etcd durch SQLite (bei Einzel-Node-Installationen) wird der Arbeitsspeicherbedarf der Control Plane signifikant reduziert. Damit eignet sich k3s ideal für ressourcenschonende Cloud-Installationen und Edge-Szenarien, ohne Kompatibilitätseinbußen gegenüber Standard-Kubernetes aufzuweisen.
+k3s ist eine von der Cloud Native Computing Foundation (CNCF) offiziell zertifizierte Kubernetes-Distribution, die von Rancher / SUSE für ressourcenbeschränkte Umgebungen, Edge-Computing und schlanke Cloud-Setups entwickelt wurde.\customcite{k3sdocs2026} Standard-Kubernetes-Installationen weisen durch die Trennung von API-Server, Controller Manager, Scheduler und dem verteilten Konsens-Speicher etcd einen erheblichen Arbeitsspeicher- und CPU-Overhead auf (oftmals über 2 bis 4~GB RAM allein für die Control Plane).
 
-\section{Infrastructure as Code mit Terraform}
+k3s reduziert diesen Footprint drastisch, indem alle Steuerungskomponenten in einer einzigen Binärdatei (unter 100~MB Dateigröße) zusammengefasst werden. Anstelle des speicherhungrigen etcd-Raft-Konsenses nutzt k3s in Einzelknoten-Konfigurationen eine eingebettete SQLite-Datenbank mit Write-Ahead Logging (WAL), die einen robusten transaktionalen Datenzugriff bei minimalem Speicherbedarf (unter 512~MB RAM) ermöglicht. Zudem sind die Container-Laufzeitumgebung \texttt{containerd}, der Ingress-Controller \texttt{Traefik}, das CoreDNS-Paket sowie der Flannel-CNI-Treiber vorkonfiguriert und direkt integriert, ohne die Kompatibilität zur Standard-Kubernetes-API einzuschränken.
+
+\section{Infrastructure as Code mit HashiCorp Terraform}
 \label{sec:terraform-grundlagen}
-Infrastructure as Code (IaC) beschreibt die deklarative Definition von IT-Infrastruktur in maschinenlesbaren Konfigurationsdateien. HashiCorp Terraform nutzt die HashiCorp Configuration Language (HCL) und führt Zustandsabgleiche über State-Dateien durch. Dadurch werden Änderungen nachvollziehbar, versionierbar und idempotent ausführbar.
+Infrastructure as Code (IaC) beschreibt die Praxis, IT-Infrastrukturen wie Netzwerke, virtuelle Server, Firewalls und Speicher über maschinenlesbare Definitionsdateien anstelle von manuellen Klicks in Cloud-Webkonsolen zu verwalten.\customcite{terraformdocs2026} HashiCorp Terraform nutzt hierzu die deklarative HashiCorp Configuration Language (HCL).
 
-\section{GitOps und Argo~CD}
+Terraform verfolgt einen zustandsbasierten Ansatz: In einer zentralen Zustandsdatei (\texttt{terraform.tfstate}) wird die exakte Zuordnung zwischen deklarierten Konfigurationsressourcen und den tatsächlich in der Cloud angelegten Entitäten persistiert. Bei jedem Ausführungszyklus generiert Terraform über einen Directed Acyclic Graph (DAG) einen Ausführungsplan (\texttt{terraform plan}), berechnet minimale Differenzen und wendet diese idempotent auf die Cloud-APIs an (\texttt{terraform apply}). Dies schließt Fehlkonfigurationen weitgehend aus und ermöglicht das vollständige und saubere Vernichten aller erzeugten Ressourcen (\texttt{terraform destroy}).
+
+\section{GitOps-Prinzipien und Argo~CD}
 \label{sec:gitops-argocd}
-GitOps erweitert das IaC-Paradigma auf den Betrieb von Kubernetes-Workloads: Ein Git-Repository dient als Single Source of Truth für den gesamten gewünschten Clusterzustand (Desired State). Ein im Cluster laufender Agent – wie Argo~CD – überwacht kontinuierlich Abweichungen zwischen dem Soll-Zustand in Git und dem Ist-Zustand im Cluster und synchronisiert diese automatisch oder manuell.
+GitOps erweitert das IaC-Paradigma speziell für den Lebenszyklus von Kubernetes-Anwendungen. Nach der Definition der CNCF OpenGitOps Working Group stützt sich GitOps auf vier universelle Leitprinzipien:\customcite{opengitops2025}
+\begin{enumerate}
+    \item \textbf{Deklarativität:} Das gesamte Zielsystem wird deklarativ in Form maschinenlesbarer Manifeste beschrieben.
+    \item \textbf{Versioniert und unveränderlich:} Das Git-Repository dient als Single Source of Truth; jede Änderung ist versioniert, signiert und über die Git-Historie revisionssicher auditierbar.
+    \item \textbf{Automatischer Abruf (Pull-Prinzip):} Software-Agenten im Cluster rufen den Soll-Zustand aktiv aus dem Repository ab, wodurch keine externen CI/CD-Systeme mit administrativen Cluster-Zugangsdaten ausgestattet werden müssen.
+    \item \textbf{Kontinuierliche Reconciliation:} Der Cluster-Zustand wird kontinuierlich mit dem Git-Repository verglichen. Tritt eine Abweichung (Drift) auf, greift das System korrigierend ein.
+\end{enumerate}
 
-\section{Fehlertoleranz und Selbstheilung in Kubernetes}
+Argo~CD setzt diese Prinzipien als nativer Kubernetes-Controller um.\customcite{argocddocs2026} Es überwacht konfigurierte Git-Repositories und synchronisiert den Zustand automatisch (\textit{Automated Sync}). Bei manuellen Manipulationen im Cluster überschreibt die \textit{Self-Heal}-Funktion den Ist-Zustand unmittelbar mit der autorisierten Git-Definition.
+
+\section{Fehlertoleranz, Health Probes und Chaos Engineering}
 \label{sec:k8s-fehlertoleranz}
-Die Selbstreparatur in Kubernetes stützt sich auf Controller-Schleifen (Reconciliation Loops) und definierte Health Checks:
+Die inhärente Ausfallsicherheit von Kubernetes basiert auf der kontinuierlichen Überprüfung des Anwendungszustands über drei Arten von Prüfsonden (Probes):\customcite{k8sdocs2026}
 \begin{itemize}
-    \item \textbf{Restart Policy:} Bestimmt das Verhalten des Kubelets beim Beenden von Containern.
-    \item \textbf{Liveness Probes:} Erkennen Deadlocks und interne Hänger; ein Fehlschlag führt zum Containerneustart.
-    \item \textbf{Readiness Probes:} Steuern, ob ein Pod bereit ist, Anfragen über den zugeordneten Service entgegenzunehmen; ein Fehlschlag entzieht den Pod vorübergehend dem Load Balancing.
+    \item \textbf{Startup Probes:} Überprüfen, ob komplexe Anwendungen erfolgreich initialisiert wurden, bevor andere Prüfungen aktiv werden.
+    \item \textbf{Liveness Probes:} Erkennen Laufzeitblockaden und Deadlocks. Schlägt die Liveness-Prüfung nach Überschreiten des \texttt{failureThreshold} fehl, terminiert das Kubelet den Container und startet ihn gemäß der definierten \texttt{restartPolicy} neu.
+    \item \textbf{Readiness Probes:} Steuern, ob ein Pod betriebsbereit für die Entgegennahme von Client-Verkehr ist. Antwortet ein Pod mit Fehlern oder Verzögerungen, entfernt der Endpoints-Controller die Pod-IP temporär aus dem Service-Routing, ohne den Prozess zu terminieren.
 \end{itemize}
+
+Die methodische Überprüfung dieser Mechanismen erfolgt im Rahmen des Chaos Engineerings.\customcite{basiri2016chaos} Durch die kontrollierte Injektion realistischer Störungen (wie Prozessabstürze oder fehlerhafte Releases) in einer Produktiv- oder Testumgebung wird das empirische Vertrauen in die Selbstreparaturfähigkeit des Gesamtsystems aufgebaut und messtechnisch belegt.
