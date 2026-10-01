@@ -10,6 +10,10 @@ Die Architektur der Gesamtlösung wurde nach den Richtlinien des AWS Well-Archit
     \item \textbf{An\-wen\-dungs\-schicht (Resilience Lab):} Beherbergt die modularisierte Demo-Webanwendung, bestehend aus der zustandslosen REST-API, einem dynamischen Web-Dashboard und geschützten Endpunkten zur Fehlerinduktion.
 \end{enumerate}
 
+Das Zusammenspiel dieser drei Architekturschichten, die Netzwerkgrenzen sowie die Signal- und GitOps-Steuerungsflüsse sind in Abbildung~\ref{fig:architektur-uebersicht} visualisiert.
+
+\input{abbildungen/architektur}
+
 \section{Wirtschaftliche und technische Bewertung: k3s gegenüber Amazon EKS}
 \label{sec:wahl-k3s-vs-eks}
 Ein zentraler architektonischer Entwurfsentscheid betrifft die Auswahl der Kubernetes-Plattform. Enterprise-Umgebungen greifen häufig standardmäßig auf Amazon Elastic Kubernetes Service (EKS) zurück. Für Entwicklungs-, Staging- oder universitäre Forschungsumgebungen weist EKS jedoch ein ungünstiges Kosten-Nutzen-Verhältnis auf:
@@ -38,3 +42,11 @@ Für die Konfigurationsverwaltung wird Kustomize eingesetzt. Im Gegensatz zu Hel
 \end{itemize}
 
 Um das Cloud-Budget optimal zu schonen, wird der Entwicklungszyklus lokal vorangetrieben: Container-Builds und Kustomize-Validierungen erfolgen lokal auf Entwicklungsrechnern. Die AWS-Infrastruktur wird gezielt und automatisiert über Terraform erst dann hochgefahren, wenn die Experimente unter realen Netzwerkbedingungen evaluiert werden.
+
+\section{Sicherheits- und Netzwerkkonzept}
+\label{sec:sicherheitskonzept}
+Die Netzwerksicherheit stützt sich auf eine strikte Trennung von externen und internen Verkehrsflüssen über AWS Security Groups:
+\begin{itemize}[noitemsep,topsep=2pt]
+    \item \textbf{Administrativer Zugang (SSH \& K8s-API):} Der SSH-Zugriff über Port 22 ist ausschließlich über asymmetrische RSA-Schlüsselpaare (2048 Bit) möglich; Passwort-Authentifizierung ist serverseitig deaktiviert. Die Kubernetes-API (Port 6443) wird über mTLS-Zertifikate abgesichert, die während des Bootstraps mit der Elastic IP als Subject Alternative Name (SAN) generiert werden.
+    \item \textbf{Anwendungs-Ingress (HTTP/HTTPS):} Der externe Produktivverkehr wird ausschließlich über die Ports 80 und 443 an den Traefik-Ingress-Controller weitergeleitet. Sämtliche containerinternen Ports (wie der FastAPI-Port 8000) bleiben vollständig im virtuellen Overlay-Netzwerk (Flannel) des Clusters isoliert und sind von außen zu keinem Zeitpunkt direkt adressierbar.
+\end{itemize}

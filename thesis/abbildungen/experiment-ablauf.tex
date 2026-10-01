@@ -1,0 +1,44 @@
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    font=\sffamily\footnotesize,
+    stepnode/.style={draw=blue!70!black, fill=blue!6, rounded corners=3pt, minimum width=2.4cm, minimum height=1.1cm, align=center, font=\sffamily\scriptsize, line width=0.7pt},
+    metricnode/.style={draw=gray!60, fill=gray!8, rounded corners=3pt, minimum width=2.4cm, minimum height=0.75cm, align=center, font=\sffamily\tiny, line width=0.5pt},
+    arrow/.style={->, >=stealth, line width=0.8pt, draw=black!75},
+    timearrow/.style={->, >=stealth, line width=1.0pt, draw=blue!80!black}
+]
+
+% Ablaufschritte
+\node[stepnode] (s1) {\textbf{1. Baseline}\\{\tiny Git Sync: OK}\\{\tiny 2 Pods \texttt{Ready}}};
+\node[stepnode, right=0.6cm of s1] (s2) {\textbf{2. Lastprofil}\\{\tiny 15 Req/s HTTP}\\{\tiny $p_{50}, p_{95}$ Messung}};
+\node[stepnode, right=0.6cm of s2, draw=red!70!black, fill=red!6] (s3) {\textbf{3. Störung}\\{\tiny $t_{\text{fault}}$: Crash /}\\{\tiny Bad Rollout / Drift}};
+\node[stepnode, right=0.6cm of s3, draw=orange!70!black, fill=orange!6] (s4) {\textbf{4. Reparatur}\\{\tiny Detektion $t_{\text{detect}}$}\\{\tiny Kubelet / Argo CD}};
+\node[stepnode, right=0.6cm of s4, draw=teal!70!black, fill=teal!6] (s5) {\textbf{5. Recovery}\\{\tiny $t_{\text{recovered}}$}\\{\tiny 100\,\% Erfolg}};
+
+% Pfeile zwischen Schritten
+\draw[arrow] (s1) -- (s2);
+\draw[arrow] (s2) -- (s3);
+\draw[arrow] (s3) -- (s4);
+\draw[arrow] (s4) -- (s5);
+
+% Messmetriken darunter
+\node[metricnode, below=0.6cm of s1] (m1) {Statusprüfung\\Sync-Verifikation};
+\node[metricnode, below=0.6cm of s2] (m2) {Hintergrundverkehr\\Verbindungsaufbau};
+\node[metricnode, below=0.6cm of s3, draw=red!50!black] (m3) {Fehlerrate $E$\\Verbindungsabbrüche};
+\node[metricnode, below=0.6cm of s4, draw=orange!50!black] (m4) {Erkennungsdauer\\$t_{\text{detect}}$};
+\node[metricnode, below=0.6cm of s5, draw=teal!50!black] (m5) {Wiederherstellung\\MTTR $= t_{\text{recovered}} - t_{\text{fault}}$};
+
+% Verbindung zu Metriken
+\draw[draw=gray!50, line width=0.5pt, dashed] (s1) -- (m1);
+\draw[draw=gray!50, line width=0.5pt, dashed] (s2) -- (m2);
+\draw[draw=red!50, line width=0.5pt, dashed] (s3) -- (m3);
+\draw[draw=orange!50, line width=0.5pt, dashed] (s4) -- (m4);
+\draw[draw=teal!50, line width=0.5pt, dashed] (s5) -- (m5);
+
+% Zeitachse ganz unten
+\draw[timearrow] ([yshift=-0.4cm]m1.south west) -- node[below, font=\scriptsize] {Zeitlicher Versuchsablauf (Sekunden)} ([yshift=-0.4cm]m5.south east);
+
+\end{tikzpicture}
+\caption{Systematischer Ablauf der kontrollierten Störungsexperimente und Zuordnung der Messmetriken, eigene Darstellung.}
+\label{fig:experiment-ablauf}
+\end{figure}
