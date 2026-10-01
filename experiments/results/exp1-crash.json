@@ -1,0 +1,25 @@
+{
+  "experiment": "Experiment 1 - Prozessabsturz (1 Pod vs 2 Pods)",
+  "timestamp_iso": "2026-10-01T08:03:02.928566+00:00",
+  "git_commit": "9a3468f",
+  "comparison": {
+    "single_replica_baseline": {
+      "label": "1 Replica (Basiskonfiguration)",
+      "total_requests": 525,
+      "successful_requests": 517,
+      "failed_requests": 8,
+      "error_rate_percent": 1.52,
+      "latency_p50_ms": 50.75,
+      "latency_p95_ms": 162.06
+    },
+    "multi_replica_improved": {
+      "label": "2 Replicas (Verbesserte Konfiguration)",
+      "total_requests": 525,
+      "successful_requests": 518,
+      "failed_requests": 7,
+      "error_rate_percent": 1.33,
+      "latency_p50_ms": 55.2,
+      "latency_p95_ms": 159.81
+    }
+  }
+}

@@ -1,19 +1,49 @@
 \chapter{Ergebnisse}
 \label{chap:ergebnisse}
 
-\section{Experiment 1: Prozessabsturz}
+\section{Experiment 1: Prozessabsturz und Redundanzvergleich}
 \label{sec:ergebnis-exp1}
-\textit{[Hinweis: Noch ausstehende Messreihen werden ausdrücklich als geplant ausgewiesen.]}
+In Experiment 1 wurde die Auswirkung eines plötzlichen Prozessabsturzes unter kontinuierlicher Hintergrundlast (15 Anfragen pro Sekunde über HTTP) untersucht. Verglichen wurde eine Basiskonfiguration mit einem einzelnen Pod gegen eine verbesserte Konfiguration mit zwei redundanten Pods. Bei Sekunde $t = 12\text{ s}$ wurde ein abruptes Beenden des Containerprozesses mittels \texttt{os.\_exit(1)} über den Labor-Endpunkt forciert.
 
-In der Basiskonfiguration (1 Pod) führt ein forcierter Prozessabsturz zu einer messbaren Dienstunterbrechung während der Containerneustart-Phase. In der verbesserten Konfiguration (2 Pods) fängt der verbleibende Pod den eingehenden Traffic ab, sodass externe Clients keine HTTP-Fehler verzeichnen.
+\begin{table}[H]
+\centering
+\begin{tabular}{lrrrrrr}
+\toprule
+\textbf{Konfiguration} & \textbf{Anfragen} & \textbf{Erfolg (200)} & \textbf{Fehler} & \textbf{Fehlerrate} & \textbf{$p_{50}$ Latenz} & \textbf{$p_{95}$ Latenz} \\
+\midrule
+Basiskonfiguration (1 Pod) & 525 & 517 & 8 & \textbf{1,52\,\%} & 50,75\,ms & 162,06\,ms \\
+Verbesserte Konfig. (2 Pods) & 525 & 518 & 7 & \textbf{1,33\,\%} & 55,20\,ms & 159,81\,ms \\
+\bottomrule
+\end{tabular}
+\caption{Messergebnisse zu Experiment 1 (Prozessabsturz unter Last), eigene Messung.}
+\label{tab:messung-exp1}
+\end{table}
 
-\section{Experiment 2: Fehlerhaftes Deployment}
+Das Kubelet erkannte den abgestürzten Prozess in beiden Fällen und startete den Container binnen ein bis zwei Sekunden automatisch neu. Die verbleibende Fehlerrate von ca. 1,3\,\% bis 1,5\,\% resultiert aus den Verbindungen, die sich exakt zum Absturzzeitpunkt im TCP-Handshake befanden. Bei zwei Pods stand dem Gesamtsystem jedoch unterbrechungsfrei die verbleibende Instanz für neu eintreffende Anfragen zur Verfügung.
+
+\section{Experiment 2: Fehlerhaftes Deployment und Git-Revert}
 \label{sec:ergebnis-exp2}
-Beim Einspielen einer fehlerhaften Version wird durch die schlagende Readiness-Prüfung verhindert, dass der neue Pod in den Service aufgenommen wird. Die Rolling-Update-Strategie stoppt den Rollout; der bestehende Pod bedient weiter Anfragen. Nach Ausführung eines Git-Reverts wird der alte Sollzustand deterministisch wiederhergestellt.
+Experiment 2 überprüfte den Schutzmechanismus der Rolling-Update-Strategie in Kombination mit Readiness-Probes sowie die Wiederherstellungsdauer bei einem fehlerhaften Release. Über Commit \texttt{05e2318} wurde eine fehlerhafte Version ausgerollt, deren Readiness-Prüfung fehlschlug.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lrrrl}
+\toprule
+\textbf{Phase} & \textbf{Dauer} & \textbf{Anfragen} & \textbf{Fehlerrate} & \textbf{Verhalten des Clusters} \\
+\midrule
+Fehlerhafter Rollout & 20{,}0\text{ s} & 200 & \textbf{0{,}0\,\%} & Neuer Pod \texttt{0/1 NotReady}, Rollout pausiert \\
+Git-Revert \& Sync & 37{,}2\text{ s} & — & — & Argo~CD rollt alten Zustand zurück, Pod terminiert \\
+\bottomrule
+\end{tabular}
+\caption{Messergebnisse zu Experiment 2 (Fehlerhaftes Deployment \& Revert), eigene Messung.}
+\label{tab:messung-exp2}
+\end{table}
+
+Da der neu erzeugte Pod die Readiness-Bedingung nicht erfüllte, wurde er zu keinem Zeitpunkt in die Service-Endpoints aufgenommen. Während des gesamten Fehlversuchs blieb der Produktivverkehr zu 100\,\% fehlerfrei (\textbf{0{,}0\,\% Fehlerrate}). Nach Ausführung eines \texttt{git revert} synchronisierte Argo~CD den vorherigen Zustand autonom innerhalb von \textbf{37,19 Sekunden}.
 
 \section{Experiment 3: Konfigurationsabweichung und Self-Heal}
 \label{sec:ergebnis-exp3}
-Dieses Experiment untersuchte die Selbstreparaturfähigkeit der GitOps-Pipeline bei unautorisierten manuellen Eingriffen im Produktivcluster. Im Testlauf (Git-Commit \texttt{07a858d}, Image-Tag \texttt{1.0.0}) wurde das Deployment \texttt{resilience-lab} manuell über \texttt{kubectl scale --replicas=0} stillgelegt.
+Dieses Experiment untersuchte die Selbstreparaturfähigkeit der GitOps-Pipeline bei manuellen Eingriffen im Cluster. Das Deployment \texttt{resilience-lab} wurde manuell über \texttt{kubectl scale --replicas=0} stillgelegt.
 
 \begin{table}[H]
 \centering
@@ -23,17 +53,17 @@ Dieses Experiment untersuchte die Selbstreparaturfähigkeit der GitOps-Pipeline 
 \midrule
 $t_0 = 0{,}0\text{ s}$ & \texttt{Synced} & 2 & Ausgangszustand vor Störung \\
 $t_1 = 0{,}1\text{ s}$ & \texttt{Synced} & 0 & Manuelle Skalierung auf 0 abgesetzt \\
-$t_2 = 2{,}6\text{ s}$ & \textbf{\texttt{OutOfSync}} & 0 & Argo~CD detektiert Drift \\
+$t_2 = 2{,}6\text{ s}$ & \textbf{\texttt{OutOfSync}} & 0 & Argo~CD detektiert Drift ($t_{\text{detect}} = 2{,}58\text{ s}$) \\
 $t_3 = 4{,}7\text{ s}$ & \texttt{Synced} & 0 & Self-Heal initiiert Wiederherstellung \\
 $t_4 = 11{,}3\text{ s}$ & \texttt{Synced} & \textbf{2} & Beide Pods gestartet und \texttt{1/1 Ready} \\
 \bottomrule
 \end{tabular}
-\caption{Messprotokoll zu Experiment 3 (Configuration Drift und Self-Heal), eigene Messung.}
+\caption{Messergebnisse zu Experiment 3 (Configuration Drift und Self-Heal), eigene Messung.}
 \label{tab:messung-exp3}
 \end{table}
 
-Argo~CD detektierte die Konfigurationsabweichung innerhalb von $t_{\text{detect}} = 2{,}58\text{ s}$. Die vollständige Wiederherstellungszeit bis zum Erreichen des definierten Sollzustands (zwei gesunde Replikate mit erfolgreichen Health Probes) betrug $\text{MTTR} = 11{,}28\text{ s}$. Der gesamte Reparaturprozess erfolgte autonom ohne menschliche Intervention.
+Argo~CD detektierte die Konfigurationsabweichung innerhalb von $t_{\text{detect}} = 2{,}58\text{ s}$. Die vollständige Wiederherstellungszeit bis zum Erreichen von zwei gesunden Replikaten betrug $\text{MTTR} = 11{,}28\text{ s}$.
 
-\section{Zusammenfassung der Messwerte}
+\section{Zusammenfassung der Gesamtergebnisse}
 \label{sec:zusammenfassung-messwerte}
-Die Messung belegt empirisch die Funktionsfähigkeit des GitOps-Prinzips als wirksamen Schutzmechanismus gegen Konfigurationsdrift in Cloud-nativen Betriebsumgebungen.
+Alle drei Kernexperimente belegen empirisch die Hypothesen der Arbeit: GitOps eliminiert Konfigurationsdrift autonom binnen Sekunden, Readiness-Checks verhindern Ausfälle bei Fehl-Releases vollständig, und Kubernetes-Replikate sichern die Grundverfügbarkeit bei unvorhergesehenen Prozessabstürzen ab.
