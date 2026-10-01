@@ -1,0 +1,50 @@
+#cloud-config
+package_update: true
+packages:
+  - curl
+  - git
+  - jq
+  - ca-certificates
+
+write_files:
+  - path: /opt/bootstrap-k3s.sh
+    permissions: '0755'
+    content: |
+      #!/bin/bash
+      set -e
+
+      echo "=== [1/5] Ermittle öffentliche Elastic IP ==="
+      PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4 || echo "127.0.0.1")
+      echo "Public IP: $PUBLIC_IP"
+
+      echo "=== [2/5] Installiere k3s mit TLS SAN ==="
+      curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--tls-san $PUBLIC_IP --write-kubeconfig-mode 644" sh -
+
+      export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+      echo "export KUBECONFIG=/etc/rancher/k3s/k3s.yaml" >> /home/ubuntu/.bashrc
+
+      echo "=== [3/5] Warte auf k3s Node Bereitschaft ==="
+      until kubectl get nodes | grep -q " Ready"; do
+        sleep 3
+      done
+
+      echo "=== [4/5] Installiere Helm ==="
+      curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+      echo "=== [5/5] Installiere Argo CD ==="
+      kubectl create namespace argocd || true
+      kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+
+      # Patch Argo CD Server auf NodePort 30080 für einfachen Web-Zugriff
+      kubectl patch svc argocd-server -n argocd -p '{"spec": {"type": "NodePort", "ports": [{"port": 80, "targetPort": 8080, "nodePort": 30080, "name": "http"}]}}'
+
+      # Kubeconfig kopieren und für externen Zugriff präparieren
+      mkdir -p /home/ubuntu/.kube
+      cp /etc/rancher/k3s/k3s.yaml /home/ubuntu/.kube/config
+      sed -i "s/127.0.0.1/$PUBLIC_IP/g" /home/ubuntu/.kube/config
+      chown -R ubuntu:ubuntu /home/ubuntu/.kube
+
+      echo "=== k3s & Argo CD Bootstrap erfolgreich abgeschlossen ==="
+
+runcmd:
+  - /opt/bootstrap-k3s.sh

@@ -1,0 +1,27 @@
+\chapter{Technische Grundlagen}
+\label{chap:technische-grundlagen}
+
+\section{Container und Kubernetes}
+\label{sec:container-kubernetes}
+Containerisierung ermöglicht die Kapselung einer Anwendung inklusive ihrer Laufzeitumgebung und Abhängigkeiten. Kubernetes fungiert als deklarative Orchestrierungsplattform zur Automatisierung von Bereitstellung, Skalierung und Betrieb containerisierter Workloads. Zentrale Konstrukte sind \textit{Pods} als kleinste ausführbare Einheiten, \textit{Deployments} zur Verwaltung des Lebenszyklus und von Rollouts sowie \textit{Services} zur internen und externen Lastverteilung.
+
+\section{k3s als leichtgewichtige Kubernetes-Distribution}
+\label{sec:k3s-grundlagen}
+k3s ist eine von der Cloud Native Computing Foundation (CNCF) zertifizierte, leichtgewichtige Kubernetes-Distribution. Durch die Bündelung aller Kubernetes-Komponenten in einer einzelnen Binärdatei und den Ersatz des speicherintensiven etcd durch SQLite (bei Einzel-Node-Installationen) wird der Arbeitsspeicherbedarf der Control Plane signifikant reduziert. Damit eignet sich k3s ideal für ressourcenschonende Cloud-Installationen und Edge-Szenarien, ohne Kompatibilitätseinbußen gegenüber Standard-Kubernetes aufzuweisen.
+
+\section{Infrastructure as Code mit Terraform}
+\label{sec:terraform-grundlagen}
+Infrastructure as Code (IaC) beschreibt die deklarative Definition von IT-Infrastruktur in maschinenlesbaren Konfigurationsdateien. HashiCorp Terraform nutzt die HashiCorp Configuration Language (HCL) und führt Zustandsabgleiche über State-Dateien durch. Dadurch werden Änderungen nachvollziehbar, versionierbar und idempotent ausführbar.
+
+\section{GitOps und Argo~CD}
+\label{sec:gitops-argocd}
+GitOps erweitert das IaC-Paradigma auf den Betrieb von Kubernetes-Workloads: Ein Git-Repository dient als Single Source of Truth für den gesamten gewünschten Clusterzustand (Desired State). Ein im Cluster laufender Agent – wie Argo~CD – überwacht kontinuierlich Abweichungen zwischen dem Soll-Zustand in Git und dem Ist-Zustand im Cluster und synchronisiert diese automatisch oder manuell.
+
+\section{Fehlertoleranz und Selbstheilung in Kubernetes}
+\label{sec:k8s-fehlertoleranz}
+Die Selbstreparatur in Kubernetes stützt sich auf Controller-Schleifen (Reconciliation Loops) und definierte Health Checks:
+\begin{itemize}
+    \item \textbf{Restart Policy:} Bestimmt das Verhalten des Kubelets beim Beenden von Containern.
+    \item \textbf{Liveness Probes:} Erkennen Deadlocks und interne Hänger; ein Fehlschlag führt zum Containerneustart.
+    \item \textbf{Readiness Probes:} Steuern, ob ein Pod bereit ist, Anfragen über den zugeordneten Service entgegenzunehmen; ein Fehlschlag entzieht den Pod vorübergehend dem Load Balancing.
+\end{itemize}

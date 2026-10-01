@@ -1,0 +1,20 @@
+\chapter{Ergebnisse}
+\label{chap:ergebnisse}
+
+\section{Experiment 1: Prozessabsturz}
+\label{sec:ergebnis-exp1}
+\textit{[Hinweis: Dieser Abschnitt dokumentiert die nach Durchführung der Versuchsreihen empirisch erfassten Messwerte. Noch nicht durchgeführte Messungen werden ausdrücklich als geplant ausgewiesen.]}
+
+In der Basiskonfiguration (1 Pod) führt ein forcierter Prozessabsturz zu einer messbaren Dienstunterbrechung während der Containerneustart-Phase. In der verbesserten Konfiguration (2 Pods) fängt der verbleibende Pod den eingehenden Traffic ab, sodass externe Clients keine HTTP-Fehler verzeichnen.
+
+\section{Experiment 2: Fehlerhaftes Deployment}
+\label{sec:ergebnis-exp2}
+Beim Einspielen einer fehlerhaften Version wird durch die schlagende Readiness-Prüfung verhindert, dass der neue Pod in den Service aufgenommen wird. Die Rolling-Update-Strategie stoppt den Rollout; der bestehende Pod bedient weiter Anfragen. Nach Ausführung eines Git-Reverts wird der alte Sollzustand deterministisch wiederhergestellt.
+
+\section{Experiment 3: Konfigurationsabweichung}
+\label{sec:ergebnis-exp3}
+Eine manuelle Modifikation im Cluster (z.\,B. Änderung der Replica-Anzahl auf 0 via \texttt{kubectl}) wird von Argo~CD innerhalb der Reconcile-Periode als \textit{OutOfSync} markiert und durch das aktivierte \textit{Self-Heal} automatisch auf den Git-Zustand korrigiert.
+
+\section{Zusammenfassung der Messwerte}
+\label{sec:zusammenfassung-messwerte}
+Die Messreihen belegen quantitatively die Wirksamkeit der getroffenen Architektur- und GitOps-Maßnahmen hinsichtlich Verfügbarkeit und Selbstreparatur.

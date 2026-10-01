@@ -1,0 +1,36 @@
+\chapter{Einleitung}
+\label{chap:einleitung}
+
+\section{Ausgangssituation und Motivation}
+\label{sec:ausgangssituation-motivation}
+In modernen softwaregetriebenen Unternehmen stellen Verfügbarkeit, Ausfallsicherheit und kurze Releasezyklen von Webanwendungen zentrale Erfolgsfaktoren dar. Cloud-native Architekturen auf Basis von Container-Virtualisierung und Orchestrierungsplattformen wie Kubernetes haben sich hierbei als Industriestandard etabliert. Dennoch bringt der Betrieb komplexer verteilter Systeme signifikante Herausforderungen mit sich: Manuelle Konfigurationsänderungen, Konfigurationsdrift zwischen Entwicklungs- und Produktionsumgebungen sowie unzureichende Resilienzmechanismen führen in der Praxis wiederkehrend zu Dienstunterbrechungen.
+
+Die vorliegende Arbeit untersucht den praktischen Einsatz moderner Betriebsparadigmen, namentlich Infrastructure as Code (IaC) mittels Terraform sowie GitOps unter Verwendung von Argo~CD. Als kosteneffiziente und ressourcenschonende Kubernetes-Plattform kommt hierbei k3s auf einer virtuellen Maschine in Amazon Web Services (AWS) zum Einsatz.
+
+\section{Problemstellung und Zielsetzung}
+\label{sec:problemstellung-zielsetzung}
+Oftmals wird davon ausgegangen, dass der bloße Einsatz von Kubernetes bereits Hochverfügbarkeit und automatische Selbstreparatur garantiert. In der betrieblichen Realität erfordert eine belastbare Resilienz jedoch ein aufeinander abgestimmtes Zusammenspiel aus Anwendungsarchitektur (z.\,B. Health Probes), Deklaration des Sollzustands im Versionskontrollsystem und automatisierten Reconcilern.
+
+Ziel dieser Arbeit ist der Aufbau einer vollautomatisierten, reproduzierbaren Labor- und Betriebsumgebung sowie die empirische Überprüfung ihrer Resilienzeigenschaften durch gezielte, kontrollierte Störungsexperimente.
+
+\section{Abgrenzung}
+\label{sec:abgrenzung}
+Der Schwerpunkt dieser Arbeit liegt auf der Infrastrukturautomatisierung, dem GitOps-Workflow und der methodischen Fehlerevaluation. Die zu betreibende Webanwendung wird bewusst schlank als zustandslose REST-API mit begleitender Benutzerschnittstelle konzipiert, um Seiteneffekte von Datenbank-Transaktionen oder persistentem Speicher zu isolieren. Auf den Einsatz von Managed Kubernetes Services mit hoher monatlicher Grundgebühr (wie Amazon EKS) wird zugunsten einer transparenten, kostengünstigen k3s-Installation auf AWS EC2 verzichtet.
+
+\section{Leitfrage und Erwartungen}
+\label{sec:leitfrage-erwartungen}
+Aus der Problemstellung leitet sich die zentrale Leitfrage der Arbeit ab:
+\begin{quote}
+\textit{Inwieweit verbessern automatisierte Bereitstellung mittels Infrastructure as Code und GitOps-gesteuerte Synchronisation die Ausfallsicherheit und Wiederherstellungsfähigkeit einer betrieblichen Webanwendung auf einer kosteneffizienten Kubernetes-Umgebung gegenüber manuell verwalteten Deployments?}
+\end{quote}
+
+Zur Beantwortung werden folgende überprüfbare Erwartungen formuliert:
+\begin{enumerate}
+    \item \textbf{Erwartung 1 (Prozess-Resilienz):} Bei einem spontanen Absturz des Anwendungsprozesses stellt die Kubernetes-Plattform den Dienst innerhalb kurzer Zeit automatisch wieder her. Bei redundanter Pod-Auslegung treten keine messbaren Dienstausfälle für Endbenutzer auf.
+    \item \textbf{Erwartung 2 (Deployment-Schutz):} Ein fehlerhaftes Release, dessen Readiness-Prüfung fehlschlägt, führt zu keinem Ausfall des Produktivverkehrs, da bestehende Instanzen aktiv bleiben. Die Wiederherstellung über einen Git-Revert erfolgt deterministisch innerhalb definierter Zeitgrenzen.
+    \item \textbf{Erwartung 3 (GitOps-Selbstheilung):} Manuelle Konfigurationsabweichungen (Configuration Drift) im Cluster werden von Argo~CD automatisch erkannt und innerhalb des Abgleichintervalls auf den im Git deklarierten Sollzustand zurückgeführt.
+\end{enumerate}
+
+\section{Vorgehensweise und Aufbau der Arbeit}
+\label{sec:vorgehensweise-aufbau}
+Die Arbeit gliedert sich in neun Kapitel. Nach der Einführung werden in Kapitel~\ref{chap:praxiskontext-anforderungen} der praktische Kontext und die Anforderungen definiert. Kapitel~\ref{chap:technische-grundlagen} vermittelt die erforderlichen technischen Grundlagen. In Kapitel~\ref{chap:architektur-entwurf} wird die Gesamtarchitektur entworfen und begründet. Die praktische Implementierung wird in Kapitel~\ref{chap:implementierung} beschrieben. Kapitel~\ref{chap:versuchsaufbau-evaluationsmethodik} legt den Versuchsplan dar, dessen Resultate in Kapitel~\ref{chap:ergebnisse} dokumentiert werden. Kapitel~\ref{chap:diskussion-praxistransfer} diskutiert die Ergebnisse und den Praxistransfer. Kapitel~\ref{chap:fazit-ausblick} schließt mit einem Fazit und Ausblick ab.

@@ -1,0 +1,73 @@
+# Git
+.git/
+*.swp
+*.bak
+*~
+
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfvars
+*.tfvars.json
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# Secrets & Local Config
+**/*.pem
+**/*.key
+**/*.pub
+secrets/
+.env
+.env.*
+kubeconfig
+kubeconfig.yaml
+kubeconfig-aws.yaml
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+
+# Docker & Builds
+dist/
+bin/
+build/
+*.exe
+__pycache__/
+*.pyc
+
+# LaTeX intermediate files
+thesis/*.aux
+thesis/*.bbl
+thesis/*.bcf
+thesis/*.blg
+thesis/*.fdb_latexmk
+thesis/*.fls
+thesis/*.lof
+thesis/*.log
+thesis/*.lot
+thesis/*.out
+thesis/*.run.xml
+thesis/*.synctex.gz
+thesis/*.toc
+thesis/*.prm
+thesis/*.app
+thesis/*.glg
+thesis/*.glo
+thesis/*.gls
+thesis/*.glsdefs
+thesis/*.ist
+thesis/*.nav
+thesis/*.snm
+thesis/*.vrb

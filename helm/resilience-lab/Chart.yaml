@@ -1,0 +1,8 @@
+apiVersion: v2
+name: resilience-lab
+description: Helm Chart für das Resilience Lab (GitOps & Kubernetes Praxistransfer)
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+maintainers:
+  - name: Konstantin Muschallik

@@ -1,0 +1,34 @@
+\chapter{Implementierung}
+\label{chap:implementierung}
+
+\section{Demo-Anwendung (Resilience Lab)}
+\label{sec:demo-anwendung}
+Die Webanwendung wird auf Basis von Python (FastAPI) implementiert. Sie stellt Kernendpunkte für den regulären Betrieb sowie dedizierte Schnittstellen zur Fehlerinduktion bereit:
+\begin{itemize}
+    \item \texttt{GET /}: Übersichtliche HTML-Statusseite mit Anzeige von Pod-Name, Anwendungsversion, Node-IP und Systemzeit.
+    \item \texttt{GET /health/live}: Liveness-Prüfung zur Erkennung interner Deadlocks.
+    \item \texttt{GET /health/ready}: Readiness-Prüfung zur Steuerung der Service-Teilnahme.
+    \item \texttt{POST /lab/crash}: Forcierter Programmabsturz via \texttt{os.\_exit(1)}.
+    \item \texttt{POST /lab/unready}: Deaktivierung der Bereitschaft für kontrollierte Traffic-Aussteuerungen.
+\end{itemize}
+
+\section{Terraform-Konfiguration und k3s-Bootstrap}
+\label{sec:terraform-k3s-bootstrap}
+Die AWS-Infrastruktur wird über modulare Terraform-Dateien beschrieben:
+\begin{itemize}
+    \item \texttt{vpc.tf}: Definiert VPC, Subnetze, Internet Gateway und Routing-Tabellen.
+    \item \texttt{security-groups.tf}: Konfiguriert Inbound-Regeln für SSH (Port 22), HTTP/HTTPS (Port 80/443) und die Kubernetes-API (Port 6443).
+    \item \texttt{ec2.tf}: Instanziiert die VM unter Verwendung eines \texttt{cloud-init}-Skripts, welches k3s installiert und das Kubeconfig-Zertifikat mit der öffentlichen IP ausstellt.
+\end{itemize}
+
+\section{Kubernetes-Manifeste und Helm-Chart}
+\label{sec:k8s-manifeste-helm}
+Das Helm-Chart \texttt{resilience-lab} strukturiert die Anwendungsbereitstellung. Es beinhaltet Vorlagen für das Deployment mit konfigurierbaren Replikaten und Health-Check-Parametern, den Service für internes Clustering sowie Ingress-Ressourcen unter Nutzung des in k3s integrierten Traefik-Controllers.
+
+\section{Argo-CD-Anbindung und GitOps-Workflow}
+\label{sec:argocd-anbindung}
+Die Bereitstellung der Anwendung erfolgt über eine Argo-CD-Application-CRD. Argo~CD überwacht das Git-Repository in periodischen Intervallen und wendet Änderungen automatisch an (Automated Sync \& Self-Heal).
+
+\section{CI-Pipeline mit GitHub Actions}
+\label{sec:ci-pipeline}
+Eine GitHub-Actions-Pipeline automatisiert den Integrationsprozess: Bei Änderungen am Anwendungscode werden automatisierte Tests ausgeführt, ein Multi-Architektur-Container-Image gebaut und in die GitHub Container Registry (\texttt{ghcr.io}) übertragen. Der neue Image-Tag wird anschließend versioniert im Helm-Value-Set hinterlegt.

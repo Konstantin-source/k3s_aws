@@ -1,0 +1,29 @@
+\chapter{Versuchsaufbau und Evaluationsmethodik}
+\label{chap:versuchsaufbau-evaluationsmethodik}
+
+\section{Versuchsplan und Messkonfiguration}
+\label{sec:versuchsplan}
+Um reproduzierbare Ergebnisse zu erzielen, folgt jeder Störungsversuch einem standardisierten Ablauf:
+\begin{enumerate}
+    \item Herstellung eines definierten Ausgangszustands (Baseline) mit bekannter Commit-ID und Image-Version.
+    \item Start der kontinuierlichen Hintergrundlast (k6-Lasttest).
+    \item Gezielte Induktion der Störung zum definierten Zeitpunkt $t_{\text{fault}}$.
+    \item Kontinuierliche Aufzeichnung von Fehlerraten und Antwortzeiten bis zur vollständigen Stabilisierung $t_{\text{recovered}}$.
+    \item Protokollierung und Export der Rohdaten.
+\end{enumerate}
+
+\section{Basiskonfiguration und verbesserte Konfiguration}
+\label{sec:basis-vs-verbessert}
+Für die Experimente werden jeweils zwei Szenarien verglichen:
+\begin{itemize}
+    \item \textbf{Basiskonfiguration (Single Replica):} Minimalauslegung mit exakt einer Pod-Instanz ohne PodDisruptionBudget.
+    \item \textbf{Verbesserte Konfiguration (Multi Replica):} Redundante Auslegung mit mindestens zwei Pod-Instanzen, feingranularen Health Probes und Rolling-Update-Strategie.
+\end{itemize}
+
+\section{Lastprofil und Messwerkzeuge}
+\label{sec:lastprofil-werkzeuge}
+Zur Lastgenerierung wird das Open-Source-Tool k6 eingesetzt. Ein konstanter Anfragestrom von 10 bis 20 virtuellen Benutzern (VUs) fragt den Statusendpunkt ab. Gemessen werden HTTP-Statuscodes, Fehlerraten sowie die Latenzperzentile (Median p50 und 95.\,Perzentil p95).
+
+\section{Definition von Ausfall und Wiederherstellung}
+\label{sec:definition-ausfall-recovery}
+Ein Systemzustand gilt als \textbf{ausgefallen}, sobald die HTTP-Erfolgsrate (Statuscode 200) unter 99\,\% fällt oder Timeouts auftreten. Die \textbf{Wiederherstellungszeit} (Mean Time to Recovery, MTTR) bezeichnet die Zeitspanne vom Auftreten des ersten Fehlers bis zum Erreichen eines stabilen Betriebs ohne Fehlantworten über ein Intervall von mindestens 30 Sekunden.

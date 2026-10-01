@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resilience Lab – Kubernetes & GitOps Evaluator</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --surface: #1e293b;
+            --border: #334155;
+            --text: #f8fafc;
+            --muted: #94a3b8;
+            --primary: #38bdf8;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background: var(--bg); color: var(--text); padding: 2rem; line-height: 1.5; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 1rem; margin-bottom: 2rem; }
+        h1 { font-size: 1.5rem; font-weight: 700; color: var(--primary); }
+        .badge { display: inline-block; padding: 0.25rem 0.6rem; border-radius: 9999px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; }
+        .badge-live { background: rgba(34, 197, 94, 0.2); color: var(--success); border: 1px solid var(--success); }
+        .badge-ready { background: rgba(56, 189, 248, 0.2); color: var(--primary); border: 1px solid var(--primary); }
+        .badge-danger { background: rgba(239, 68, 68, 0.2); color: var(--danger); border: 1px solid var(--danger); }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 0.75rem; padding: 1.5rem; }
+        .card h2 { font-size: 1.1rem; margin-bottom: 1rem; color: var(--muted); border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
+        .metric-row { display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px dashed rgba(255,255,255,0.05); }
+        .metric-label { color: var(--muted); font-size: 0.9rem; }
+        .metric-value { font-weight: 600; font-family: monospace; font-size: 0.95rem; }
+        .highlight-pod { color: #f43f5e; font-size: 1.1rem; }
+        
+        /* Lab Buttons */
+        .btn-group { display: flex; flex-direction: column; gap: 0.75rem; }
+        button { cursor: pointer; border: none; padding: 0.7rem 1rem; border-radius: 0.5rem; font-weight: 600; transition: all 0.2s; font-size: 0.9rem; }
+        .btn-crash { background: var(--danger); color: white; }
+        .btn-crash:hover { background: #dc2626; }
+        .btn-warn { background: var(--warning); color: #000; }
+        .btn-warn:hover { background: #d97706; }
+        .btn-primary { background: var(--primary); color: #000; }
+        .btn-primary:hover { background: #0284c7; color: white; }
+        .btn-secondary { background: #475569; color: white; }
+        .btn-secondary:hover { background: #64748b; }
+        
+        .table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; font-size: 0.85rem; }
+        .table th, .table td { text-align: left; padding: 0.5rem; border-bottom: 1px solid var(--border); }
+        .table th { color: var(--muted); font-weight: 600; }
+        
+        .pulse { animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+        #live-counter { color: var(--success); font-family: monospace; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div>
+                <h1>Resilience Lab <span class="badge badge-ready">v{{ meta.app_version }}</span></h1>
+                <p style="color: var(--muted); font-size: 0.85rem;">GitOps & Kubernetes Evaluierungs-Plattform</p>
+            </div>
+            <div>
+                <span class="badge badge-live pulse">● Live Polling</span>
+                <span id="live-counter">0 req</span>
+            </div>
+        </header>
+
+        <div class="grid">
+            <!-- Pod Identity & State -->
+            <div class="card">
+                <h2>Pod & Cluster-Metadaten</h2>
+                <div class="metric-row">
+                    <span class="metric-label">Antwortende Pod-Instanz:</span>
+                    <span class="metric-value highlight-pod" id="pod-name">{{ meta.pod_name }}</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Namespace:</span>
+                    <span class="metric-value">{{ meta.pod_namespace }}</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Pod-IP:</span>
+                    <span class="metric-value" id="pod-ip">{{ meta.pod_ip }}</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Node-Name:</span>
+                    <span class="metric-value">{{ meta.node_name }}</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Uptime:</span>
+                    <span class="metric-value" id="pod-uptime">{{ meta.uptime_formatted }}</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Latenz (Client-seitig):</span>
+                    <span class="metric-value" id="latency">-</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Status Health Probes:</span>
+                    <div>
+                        <span class="badge badge-live" id="live-badge">Live: {{ "OK" if meta.is_live else "FAIL" }}</span>
+                        <span class="badge badge-ready" id="ready-badge">Ready: {{ "OK" if meta.is_ready else "UNREADY" }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fault Injection Lab Controls -->
+            <div class="card" style="border-color: rgba(239, 68, 68, 0.4);">
+                <h2>Labor-Bereich: Kontrollierte Störungen</h2>
+                <div class="btn-group">
+                    <button class="btn-crash" onclick="triggerCrash()">
+                        💥 Experiment 1: Prozessabsturz (Crash)
+                    </button>
+                    <button class="btn-warn" onclick="toggleReady()">
+                        ⚠️ Experiment 2 Vorstufe: Readiness umschalten
+                    </button>
+                    <button class="btn-secondary" onclick="simulateHang()">
+                        ⏱️ Hänger simulieren (Liveness Timeout)
+                    </button>
+                    <button class="btn-secondary" onclick="resetLab()">
+                        🔄 Labor-Status zurücksetzen
+                    </button>
+                </div>
+                <p id="action-msg" style="margin-top: 1rem; font-size: 0.85rem; color: var(--primary);"></p>
+            </div>
+        </div>
+
+        <!-- Business Context: Order Processing -->
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                <h2>Praxistransfer: Simulierte Auftragsverarbeitung</h2>
+                <button class="btn-primary" onclick="createOrder()">+ Neuer Auftrag</button>
+            </div>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Auftrags-ID</th>
+                        <th>Bezeichnung</th>
+                        <th>Status</th>
+                        <th>Verarbeitet durch Pod</th>
+                        <th>Zeitstempel</th>
+                    </tr>
+                </thead>
+                <tbody id="orders-body">
+                    {% for order in orders %}
+                    <tr>
+                        <td><code>{{ order.id }}</code></td>
+                        <td>{{ order.title }}</td>
+                        <td><span class="badge badge-live">{{ order.status }}</span></td>
+                        <td><code>{{ order.processed_by_pod }}</code></td>
+                        <td>{{ order.created_at[:19] }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let reqCount = 0;
+        
+        async function pollStatus() {
+            const start = performance.now();
+            try {
+                const res = await fetch('/api/info');
+                const duration = Math.round(performance.now() - start);
+                document.getElementById('latency').textContent = duration + ' ms';
+                
+                if (res.ok) {
+                    const json = await res.json();
+                    const d = json.data;
+                    document.getElementById('pod-name').textContent = d.pod_name;
+                    document.getElementById('pod-ip').textContent = d.pod_ip;
+                    document.getElementById('pod-uptime').textContent = d.uptime_formatted;
+                    document.getElementById('live-badge').textContent = 'Live: ' + (d.is_live ? 'OK' : 'FAIL');
+                    document.getElementById('ready-badge').textContent = 'Ready: ' + (d.is_ready ? 'OK' : 'UNREADY');
+                    reqCount++;
+                    document.getElementById('live-counter').textContent = reqCount + ' reqs';
+                }
+            } catch (err) {
+                document.getElementById('latency').textContent = 'ERR / Offline';
+                document.getElementById('live-counter').textContent = reqCount + ' reqs (Ausfall)';
+            }
+        }
+        
+        setInterval(pollStatus, 1500);
+
+        async function triggerCrash() {
+            if (!confirm('Soll dieser Container-Prozess jetzt gezielt zum Absturz gebracht werden? (os._exit)')) return;
+            const res = await fetch('/lab/crash', { method: 'POST' });
+            const data = await res.json();
+            document.getElementById('action-msg').textContent = data.message || 'Absturz initiiert!';
+        }
+
+        async function toggleReady() {
+            const res = await fetch('/lab/toggle-ready', { method: 'POST' });
+            const data = await res.json();
+            document.getElementById('action-msg').textContent = 'Readiness steht nun auf: ' + data.is_ready;
+            pollStatus();
+        }
+
+        async function simulateHang() {
+            if (!confirm('Simulierten Deadlock aktivieren? Der Pod wird Liveness-Prüfungen verfehlen.')) return;
+            const res = await fetch('/lab/simulate-hang', { method: 'POST' });
+            document.getElementById('action-msg').textContent = 'Simulierter Deadlock aktiv!';
+            pollStatus();
+        }
+
+        async function resetLab() {
+            const res = await fetch('/lab/reset', { method: 'POST' });
+            document.getElementById('action-msg').textContent = 'Laborzustand wieder auf gesunde Werte gesetzt.';
+            pollStatus();
+        }
+
+        async function createOrder() {
+            const title = prompt('Auftragstitel:', 'Simulierter Report #' + (Math.floor(Math.random() * 900) + 100));
+            if (!title) return;
+            const res = await fetch('/api/orders?title=' + encodeURIComponent(title), { method: 'POST' });
+            if (res.ok) {
+                window.location.reload();
+            }
+        }
+    </script>
+</body>
+</html>

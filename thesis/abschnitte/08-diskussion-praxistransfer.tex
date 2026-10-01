@@ -1,0 +1,18 @@
+\chapter{Diskussion und Praxistransfer}
+\label{chap:diskussion-praxistransfer}
+
+\section{Bewertung der Ergebnisse}
+\label{sec:bewertung-ergebnisse}
+Die Experimente demonstrieren, dass Containerorchestrierung in Verbindung mit GitOps eine signifikante Erhöhung der Betriebssicherheit bietet. Gleichzeitig wird deutlich, dass Resilienz nicht allein durch die Plattform erzeugt wird: Nur korrekt konfigurierte Readiness- und Liveness-Prüfungen verhindern, dass fehlerhafter Code ungefiltert Endnutzer erreicht.
+
+\section{Beantwortung der Leitfrage}
+\label{sec:beantwortung-leitfrage}
+Die eingangs gestellte Leitfrage kann positiv beantwortet werden: Die Kombination aus deklarativer Infrastruktur mit Terraform und kontinuierlichem GitOps-Abgleich mit Argo~CD eliminiert manuelle Betriebsrisiken, verkürzt die Mean Time to Recovery (MTTR) drastisch und stellt eine reproduzierbare Wiederherstellung nach Störungen sicher.
+
+\section{Einschränkungen und Grenzen}
+\label{sec:einschraenkungen-grenzen}
+Als wesentliche Limitation ist die Beschränkung auf einen Single-Node-Cluster im Rahmen dieser Arbeit zu nennen. Ein physischer Ausfall der gesamten EC2-Instanz kann von internen Kubernetes-Mechanismen nicht kompensiert werden; hierfür wäre ein Multi-Node-Cluster über mehrere Verfügbarkeitszonen (Availability Zones) erforderlich, was mit höheren Betriebskosten verbunden ist.
+
+\section{Praxistransfer und betrieblicher Nutzen}
+\label{sec:praxistransfer-nutzen}
+Für betriebliche Anwendungen liefert das vorgestellte Modell eine kosteneffiziente Blaupause: Entwicklungs- und Stagingumgebungen können mit minimalem Budget auf k3s betrieben werden, während die gleichen Helm-Charts und GitOps-Pipelines ohne Anpassung auf Multi-Node-EKS-Produktionsclustern eingesetzt werden können.
