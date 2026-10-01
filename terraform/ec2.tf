@@ -15,7 +15,7 @@ data "aws_ami" "ubuntu" {
 
 resource "aws_key_pair" "k3s_key" {
   key_name_prefix = "${var.project_name}-key"
-  public_key      = fileexists("~/.ssh/id_rsa.pub") ? file("~/.ssh/id_rsa.pub") : fileexists("~/.ssh/id_ed25519.pub") ? file("~/.ssh/id_ed25519.pub") : "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKPlaceholderDummyKeyForValidationOnly k3s-lab"
+  public_key      = fileexists(pathexpand("~/.ssh/id_ed25519.pub")) ? file(pathexpand("~/.ssh/id_ed25519.pub")) : fileexists(pathexpand("~/.ssh/id_rsa.pub")) ? file(pathexpand("~/.ssh/id_rsa.pub")) : "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKPlaceholderDummyKeyForValidationOnly k3s-lab"
 }
 
 resource "aws_instance" "k3s_server" {
