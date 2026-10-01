@@ -8,7 +8,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/kmuschallik/k3s_aws.git
+    repoURL: https://github.com/Konstantin-source/k3s_aws.git
     targetRevision: HEAD
     path: kustomize/overlays/aws
   destination:
