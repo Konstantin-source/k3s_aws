@@ -1,6 +1,6 @@
 resource "aws_security_group" "k3s" {
   name        = "${var.project_name}-sg"
-  description = "Security Group für k3s Server und Ingress"
+  description = "Security Group for k3s server and ingress"
   vpc_id      = aws_vpc.main.id
 
   # SSH

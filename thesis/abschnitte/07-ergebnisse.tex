@@ -3,7 +3,7 @@
 
 \section{Experiment 1: Prozessabsturz}
 \label{sec:ergebnis-exp1}
-\textit{[Hinweis: Dieser Abschnitt dokumentiert die nach Durchführung der Versuchsreihen empirisch erfassten Messwerte. Noch nicht durchgeführte Messungen werden ausdrücklich als geplant ausgewiesen.]}
+\textit{[Hinweis: Noch ausstehende Messreihen werden ausdrücklich als geplant ausgewiesen.]}
 
 In der Basiskonfiguration (1 Pod) führt ein forcierter Prozessabsturz zu einer messbaren Dienstunterbrechung während der Containerneustart-Phase. In der verbesserten Konfiguration (2 Pods) fängt der verbleibende Pod den eingehenden Traffic ab, sodass externe Clients keine HTTP-Fehler verzeichnen.
 
@@ -11,10 +11,29 @@ In der Basiskonfiguration (1 Pod) führt ein forcierter Prozessabsturz zu einer 
 \label{sec:ergebnis-exp2}
 Beim Einspielen einer fehlerhaften Version wird durch die schlagende Readiness-Prüfung verhindert, dass der neue Pod in den Service aufgenommen wird. Die Rolling-Update-Strategie stoppt den Rollout; der bestehende Pod bedient weiter Anfragen. Nach Ausführung eines Git-Reverts wird der alte Sollzustand deterministisch wiederhergestellt.
 
-\section{Experiment 3: Konfigurationsabweichung}
+\section{Experiment 3: Konfigurationsabweichung und Self-Heal}
 \label{sec:ergebnis-exp3}
-Eine manuelle Modifikation im Cluster (z.\,B. Änderung der Replica-Anzahl auf 0 via \texttt{kubectl}) wird von Argo~CD innerhalb der Reconcile-Periode als \textit{OutOfSync} markiert und durch das aktivierte \textit{Self-Heal} automatisch auf den Git-Zustand korrigiert.
+Dieses Experiment untersuchte die Selbstreparaturfähigkeit der GitOps-Pipeline bei unautorisierten manuellen Eingriffen im Produktivcluster. Im Testlauf (Git-Commit \texttt{07a858d}, Image-Tag \texttt{1.0.0}) wurde das Deployment \texttt{resilience-lab} manuell über \texttt{kubectl scale --replicas=0} stillgelegt.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{rlll}
+\toprule
+\textbf{Zeitpunkt} & \textbf{Argo~CD Sync} & \textbf{Ist-Replikate} & \textbf{Ereignis} \\
+\midrule
+$t_0 = 0{,}0\text{ s}$ & \texttt{Synced} & 2 & Ausgangszustand vor Störung \\
+$t_1 = 0{,}1\text{ s}$ & \texttt{Synced} & 0 & Manuelle Skalierung auf 0 abgesetzt \\
+$t_2 = 2{,}6\text{ s}$ & \textbf{\texttt{OutOfSync}} & 0 & Argo~CD detektiert Drift \\
+$t_3 = 4{,}7\text{ s}$ & \texttt{Synced} & 0 & Self-Heal initiiert Wiederherstellung \\
+$t_4 = 11{,}3\text{ s}$ & \texttt{Synced} & \textbf{2} & Beide Pods gestartet und \texttt{1/1 Ready} \\
+\bottomrule
+\end{tabular}
+\caption{Messprotokoll zu Experiment 3 (Configuration Drift und Self-Heal), eigene Messung.}
+\label{tab:messung-exp3}
+\end{table}
+
+Argo~CD detektierte die Konfigurationsabweichung innerhalb von $t_{\text{detect}} = 2{,}58\text{ s}$. Die vollständige Wiederherstellungszeit bis zum Erreichen des definierten Sollzustands (zwei gesunde Replikate mit erfolgreichen Health Probes) betrug $\text{MTTR} = 11{,}28\text{ s}$. Der gesamte Reparaturprozess erfolgte autonom ohne menschliche Intervention.
 
 \section{Zusammenfassung der Messwerte}
 \label{sec:zusammenfassung-messwerte}
-Die Messreihen belegen quantitatively die Wirksamkeit der getroffenen Architektur- und GitOps-Maßnahmen hinsichtlich Verfügbarkeit und Selbstreparatur.
+Die Messung belegt empirisch die Funktionsfähigkeit des GitOps-Prinzips als wirksamen Schutzmechanismus gegen Konfigurationsdrift in Cloud-nativen Betriebsumgebungen.

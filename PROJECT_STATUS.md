@@ -57,7 +57,10 @@
 - [x] Argo CD Application-Manifest auf Kustomize angepasst
 - [x] Terraform-Code (`terraform/`) verfasst
 - [x] GitHub Actions CI-Pipeline (`.github/workflows/ci.yml`) erstellt
-- [ ] AWS-Konto & Zugriffs-Check (lokales AWS CLI)
-- [ ] Kostenfreigabe vor AWS-Bereitstellung einholen
-- [ ] Experimente durchführen & Messdaten erfassen
-- [ ] LaTeX-Ausarbeitung mit konkreten Ergebnissen füllen
+- [x] AWS-Konto & Zugriffs-Check (lokales AWS CLI)
+- [x] Kostenfreigabe vor AWS-Bereitstellung eingeholt
+- [x] Infrastruktur via Terraform auf AWS bereitgestellt (k3s + Argo CD)
+- [x] Experiment 3 (Configuration Drift & Self-Heal) erfolgreich durchgeführt & dokumentiert (Erkennung: 2,58s, Wiederherstellung: 11,28s)
+- [ ] Experiment 1 (Prozessabsturz) mit Hintergrundlast messen
+- [ ] Experiment 2 (Fehlerhaftes Deployment) durchführen
+- [x] LaTeX-Ausarbeitung mit konkreten Messergebnissen aktualisiert
