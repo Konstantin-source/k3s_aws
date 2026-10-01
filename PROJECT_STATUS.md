@@ -60,7 +60,8 @@
 - [x] AWS-Konto & Zugriffs-Check (lokales AWS CLI)
 - [x] Kostenfreigabe vor AWS-Bereitstellung eingeholt
 - [x] Infrastruktur via Terraform auf AWS bereitgestellt (k3s + Argo CD)
+- [x] Experiment 1 (Prozessabsturz) mit Hintergrundlast gemessen (Vergleich 1 Pod vs. 2 Pods)
+- [x] Experiment 2 (Fehlerhaftes Deployment & Git Revert) erfolgreich durchgeführt (0,0% Fehlerrate während Rollout, MTTR 37,2s)
 - [x] Experiment 3 (Configuration Drift & Self-Heal) erfolgreich durchgeführt & dokumentiert (Erkennung: 2,58s, Wiederherstellung: 11,28s)
-- [ ] Experiment 1 (Prozessabsturz) mit Hintergrundlast messen
-- [ ] Experiment 2 (Fehlerhaftes Deployment) durchführen
-- [x] LaTeX-Ausarbeitung mit konkreten Messergebnissen aktualisiert
+- [x] LaTeX-Ausarbeitung mit allen konkreten Messergebnissen aktualisiert & als PDF kompiliert (32 Seiten)
+- [x] Vollständiger Abbau aller AWS-Cloud-Ressourcen via Terraform Destroy & Verifikation auf 0 Restkosten durchgeführt
