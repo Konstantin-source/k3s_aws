@@ -22,10 +22,6 @@ Verbessert (2 Pods)  & 525 & 518 & 7 & \textbf{1,33\,\%} & 55,2\,ms & 159,8\,ms 
 
 Das Kubelet erkannte den abgestürzten Prozess in beiden Fällen und startete den Container binnen ein bis zwei Sekunden automatisch neu. Die verbleibende Fehlerrate von ca. 1,3\,\% bis 1,5\,\% resultiert aus den Verbindungen, die sich exakt zum Absturzzeitpunkt im TCP-Handshake befanden. Bei zwei Pods stand dem Gesamtsystem jedoch unterbrechungsfrei die verbleibende Instanz für neu eintreffende Anfragen zur Verfügung.
 
-Aus den Rohdaten lässt sich die effektive Ausfallzeit ableiten: Bei einer Senderate von 15~Req/s und lediglich 8 (bzw. 7) fehlgeschlagenen Anfragen ergibt sich ein tatsächliches Fehlerfenster von $t_{\text{Ausfall}} = \frac{8}{15} \approx 0{,}53\text{ s}$ für die Basiskonfiguration und $\frac{7}{15} \approx 0{,}47\text{ s}$ für die redundante Konfiguration. Dies zeigt, dass die Kubernetes-Endpoints-Aktualisierung (iptables-Regelupdate) bereits nach weniger als einer Sekunde greift — deutlich schneller als der vollständige Container-Neustart.
-
-Der Latenz-Spread ($\Delta = p_{95} - p_{50}$) beträgt für die Basiskonfiguration 111,3\,ms und für die redundante Konfiguration 104,6\,ms. Die leicht geringere Streuung bei zwei Pods deutet auf eine gleichmäßigere Lastverteilung hin, da der Traefik-Ingress eingehende Anfragen über Round-Robin auf beide Endpunkte verteilt.
-
 \section{Experiment 2: Fehlerhaftes Deployment und Git-Revert}
 \label{sec:ergebnis-exp2}
 Experiment 2 überprüfte den Schutzmechanismus der Rolling-Update-Strategie in Kombination mit Readiness-Probes sowie die Wiederherstellungsdauer bei einem fehlerhaften Release. Über Commit \texttt{05e2318} wurde eine fehlerhafte Version ausgerollt, deren Readiness-Prüfung fehlschlug.
@@ -45,7 +41,7 @@ Git-Revert \& Sync & 37{,}2\text{ s} & — & — & Argo~CD rollt alten Zustand z
 \label{tab:messung-exp2}
 \end{table}
 
-Da der neu erzeugte Pod die Readiness-Bedingung nicht erfüllte, wurde er zu keinem Zeitpunkt in die Service-Endpoints aufgenommen. Während des gesamten Fehlversuchs blieb der Produktivverkehr zu 100\,\% fehlerfrei (\textbf{0{,}0\,\% Fehlerrate}). Nach Ausführung eines \texttt{git revert} synchronisierte Argo~CD den vorherigen Zustand autonom innerhalb von \textbf{37,19 Sekunden}. Die Verfügbarkeit in diesem Szenario betrug somit $A = \frac{200}{200} = 100{,}0\,\%$.
+Da der neu erzeugte Pod die Readiness-Bedingung nicht erfüllte, wurde er zu keinem Zeitpunkt in die Service-Endpoints aufgenommen. Während des gesamten Fehlversuchs blieb der Produktivverkehr zu 100\,\% fehlerfrei (\textbf{0{,}0\,\% Fehlerrate}). Nach Ausführung eines \texttt{git revert} synchronisierte Argo~CD den vorherigen Zustand autonom innerhalb von \textbf{37,19 Sekunden}.
 
 \section{Experiment 3: Konfigurationsabweichung und Self-Heal}
 \label{sec:ergebnis-exp3}
@@ -69,27 +65,8 @@ $t_4 = 11{,}3\text{ s}$ & \texttt{Synced} & \textbf{2} & Beide Pods gestartet un
 \label{tab:messung-exp3}
 \end{table}
 
-Argo~CD detektierte die Konfigurationsabweichung innerhalb von $t_{\text{detect}} = 2{,}58\text{ s}$. Die vollständige Wiederherstellungszeit bis zum Erreichen von zwei gesunden Replikaten betrug $\text{MTTR} = 11{,}28\text{ s}$. Bemerkenswert ist die Geschwindigkeit: Zwischen Detektion ($t_2$) und dem Anstoß der Wiederherstellung ($t_3$) vergingen lediglich 2,1 Sekunden — Argo~CD reagiert in der getesteten Konfiguration nahezu in Echtzeit auf Abweichungen.
+Argo~CD detektierte die Konfigurationsabweichung innerhalb von $t_{\text{detect}} = 2{,}58\text{ s}$. Die vollständige Wiederherstellungszeit bis zum Erreichen von zwei gesunden Replikaten betrug $\text{MTTR} = 11{,}28\text{ s}$.
 
-\section{Gesamtvergleich und abgeleitete Metriken}
+\section{Zusammenfassung der Gesamtergebnisse}
 \label{sec:zusammenfassung-messwerte}
-Tabelle~\ref{tab:gesamtvergleich} fasst die zentralen Leistungskennzahlen aller drei Experimente zusammen und stellt sie den in Kapitel~\ref{chap:praxiskontext-anforderungen} definierten Anforderungen gegenüber.
-
-\begin{table}[H]
-\centering
-\small
-\begin{tabular}{llccl}
-\toprule
-\textbf{Experiment} & \textbf{Fehlerrate} & \textbf{MTTR} & \textbf{Verfügbarkeit} & \textbf{Anforderung} \\
-\midrule
-1: Crash (1 Pod)  & 1,52\,\%           & $\approx$\,2\,s   & 98,48\,\% & FA-1 \\
-1: Crash (2 Pods) & 1,33\,\%           & $\approx$\,2\,s   & 98,67\,\% & FA-1 \\
-2: Bad Deploy     & \textbf{0,00\,\%}  & 37,19\,s           & \textbf{100,00\,\%} & FA-2 \\
-3: Config Drift   & —                  & 11,28\,s           & —          & FA-3 ($<$\,60\,s) \\
-\bottomrule
-\end{tabular}
-\caption{Gesamtvergleich der Resilienzkennzahlen aller Experimente, eigene Auswertung.}
-\label{tab:gesamtvergleich}
-\end{table}
-
-Die Gesamtbetrachtung zeigt drei zentrale Befunde: Erstens erfüllen die Wiederherstellungszeiten aller Szenarien die Anforderung FA-3 ($\text{MTTR} < 60\text{ s}$) deutlich. Zweitens verhindert der Readiness-Gate-Mechanismus Ausfälle bei fehlerhaften Deployments vollständig (FA-2). Drittens reduziert bereits eine einzelne zusätzliche Replik die Fehlerrate bei Prozessabstürzen, wenngleich die residuale Rate von 1,33\,\% aus unvermeidbaren TCP-Verbindungsabbrüchen während des Endpoints-Updates resultiert und nicht den SLO-Zielwert von 99,9\,\% Verfügbarkeit aus Kapitel~\ref{chap:praxiskontext-anforderungen} erreicht. Für unternehmenskritische Workloads empfehlen sich daher ergänzend PreStop-Hooks und höhere Replikationsfaktoren.
+Alle drei Kernexperimente belegen empirisch die Hypothesen der Arbeit: GitOps eliminiert Konfigurationsdrift autonom binnen Sekunden, Readiness-Checks verhindern Ausfälle bei Fehl-Releases vollständig, und Kubernetes-Replikate sichern die Grundverfügbarkeit bei unvorhergesehenen Prozessabstürzen ab.

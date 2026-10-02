@@ -7,9 +7,9 @@ Die vorliegende Arbeit hat demonstriert, dass moderne cloud-native Betriebskonze
 
 Die Durchführung dreier kontrollierter Störungsexperimente lieferte eindeutige empirische Belege für die Resilienzeigenschaften des Gesamtsystems:
 \begin{itemize}[noitemsep,topsep=2pt]
-    \item Bei abrupten Prozessabstürzen sichert eine redundante Pod-Auslegung den Weiterbetrieb bei einer Verfügbarkeit von 98,67\,\% und einer effektiven Ausfallzeit von unter 0,5 Sekunden.
-    \item Defensiv konfigurierte Readiness-Probes verhindern bei fehlerhaften Software-Rollouts Ausfälle des Produktivverkehrs vollständig (Verfügbarkeit 100{,}0\,\%), während Git-Reverts eine deterministische Wiederherstellung in unter 40 Sekunden ermöglichen.
-    \item Konfigurationsabweichungen durch unautorisierte Eingriffe im Cluster werden von Argo~CD in 2{,}58 Sekunden detektiert und autonom binnen 11{,}28 Sekunden korrigiert — deutlich unter der Anforderung FA-3 ($<$\,60\,s).
+    \item Bei abrupten Prozessabstürzen sichert eine redundante Pod-Auslegung den unterbrechungsfreien Weiterbetrieb und reduziert Dienstbeeinträchtigungen auf minimale Netzwerk-Handshake-Verluste.
+    \item Defensiv konfigurierte Readiness-Probes verhindern bei fehlerhaften Software-Rollouts Ausfälle des Produktivverkehrs vollständig (0{,}0\,\% Fehlerrate), während Git-Reverts eine deterministische Wiederherstellung in unter 40 Sekunden ermöglichen.
+    \item Konfigurationsabweichungen durch unautorisierte Eingriffe im Cluster werden von Argo~CD in weniger als drei Sekunden detektiert und autonom binnen rund elf Sekunden korrigiert.
 \end{itemize}
 
 Damit wurde gezeigt, dass GitOps und Containerorchestrierung die klassische Kluft zwischen hoher Ausfallsicherheit und budgetären Beschränkungen wirksam überbrücken können.

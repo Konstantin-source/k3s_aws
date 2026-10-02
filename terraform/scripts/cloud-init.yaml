@@ -33,7 +33,7 @@ write_files:
 
       echo "=== [5/5] Installiere Argo CD ==="
       kubectl create namespace argocd || true
-      kubectl apply --server-side -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+      kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 
       # Patch Argo CD Server auf NodePort 30080 für einfachen Web-Zugriff
       kubectl patch svc argocd-server -n argocd -p '{"spec": {"type": "NodePort", "ports": [{"port": 80, "targetPort": 8080, "nodePort": 30080, "name": "http"}]}}'

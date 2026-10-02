@@ -3,7 +3,7 @@
 
 \section{Detaillierte Interpretation der empirischen Befunde}
 \label{sec:bewertung-ergebnisse}
-Die erhobenen Messwerte der drei Störungsexperimente (zusammengefasst in Tabelle~\ref{tab:gesamtvergleich}) liefern ein differenziertes Bild über die Leistungsfähigkeit cloud-nativer Resilienzmechanismen in kostengünstigen Umgebungen:
+Die erhobenen Messwerte der drei Störungsexperimente liefern ein differenziertes Bild über die Leistungsfähigkeit cloud-nativer Resilienzmechanismen in kostengünstigen Umgebungen:
 
 In Experiment~1 zeigte sich, dass ein Pod-Absturz selbst bei redundanter Auslegung (\texttt{replicas: 2}) eine geringfügige Fehlerrate von 1{,}33\,\% (7 von 525 Anfragen) aufwies. Diese Fehler traten exakt in dem schmalen Zeitfenster auf, in dem der getötete Container bestehende TCP-Verbindungen abbrach, bevor der Kubelet-Health-Check und der Endpoints-Controller die Routing-Tabellen im Linux-Kernel via iptables aktualisieren konnten. Dennoch verhinderte die zweite Pod-Instanz einen totalen Dienstausfall: Während bei einer Einzelinstanz alle Folgeanfragen bis zum Neustart ins Leere liefen, wurden neue Anfragen sofort unterbrechungsfrei an den gesunden Pod geleitet. Für unternehmenskritische Anwendungen empfiehlt sich hier ergänzend der Einsatz von \textit{PreStop-Hooks} und sanften Terminierungsintervallen (\texttt{terminationGracePeriodSeconds}), um fliegende TCP-Verbindungen vor dem Signalabzug geordnet zu beenden.\customcite{burns2018designing}
 
