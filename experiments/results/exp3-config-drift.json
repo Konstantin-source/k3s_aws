@@ -1,33 +1,33 @@
 {
   "experiment": "Experiment 3 - Konfigurationsabweichung und Self-Heal",
-  "date_iso": "2026-10-01T07:55:11.830726+00:00",
+  "date_iso": "2026-10-02T10:15:31.789368+00:00",
   "git_commit": "07a858dac10fe5e76bec13440a743e7a9331bd21",
   "image_version": "1.0.0",
   "cluster": "k3s on AWS EC2 (eu-central-1)",
   "metrics": {
     "initial_state": {
       "sync": "Synced",
-      "health": "Progressing"
+      "health": "Healthy"
     },
-    "detection_duration_seconds": 2.58,
-    "total_recovery_duration_seconds": 11.28,
+    "detection_duration_seconds": 3.85,
+    "total_recovery_duration_seconds": 13.32,
     "success": true
   },
   "timeline": [
     {
       "event": "drift_triggered",
-      "timestamp": 1790841300.0982761,
+      "timestamp": 1790936117.8356931,
       "detail": "Skalierung auf 0 Replikate"
     },
     {
       "event": "drift_detected_by_argocd",
-      "timestamp": 1790841302.6740708,
-      "elapsed_s": 2.6
+      "timestamp": 1790936121.6862452,
+      "elapsed_s": 3.9
     },
     {
       "event": "fully_reconciled",
-      "timestamp": 1790841311.3832452,
-      "elapsed_s": 11.3
+      "timestamp": 1790936131.1527371,
+      "elapsed_s": 13.3
     }
   ],
   "cluster_events": ""

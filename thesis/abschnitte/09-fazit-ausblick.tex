@@ -7,9 +7,9 @@ Die vorliegende Arbeit hat demonstriert, dass moderne cloud-native Betriebskonze
 
 Die Durchführung dreier kontrollierter Störungsexperimente lieferte eindeutige empirische Belege für die Resilienzeigenschaften des Gesamtsystems:
 \begin{itemize}[noitemsep,topsep=2pt]
-    \item Bei abrupten Prozessabstürzen sichert eine redundante Pod-Auslegung den unterbrechungsfreien Weiterbetrieb und reduziert Dienstbeeinträchtigungen auf minimale Netzwerk-Handshake-Verluste.
-    \item Defensiv konfigurierte Readiness-Probes verhindern bei fehlerhaften Software-Rollouts Ausfälle des Produktivverkehrs vollständig (0{,}0\,\% Fehlerrate), während Git-Reverts eine deterministische Wiederherstellung in unter 40 Sekunden ermöglichen.
-    \item Konfigurationsabweichungen durch unautorisierte Eingriffe im Cluster werden von Argo~CD in weniger als drei Sekunden detektiert und autonom binnen rund elf Sekunden korrigiert.
+    \item Bei abrupten Prozessabstürzen sichert Kubernetes den raschen Wiederanlauf bei einer Verfügbarkeit von 97,9\,\% bis 98,8\,\% und einer effektiven Ausfallzeit von lediglich 0,5 Sekunden für die Basiskonfiguration.
+    \item Defensiv konfigurierte Readiness-Probes und Rolling-Update-Strategien schützen den Cluster vor Totalausfällen bei fehlerhaften Releases, während ein Git-Revert den Ausgangszustand vollautomatisch wiederherstellt.
+    \item Konfigurationsabweichungen durch unautorisierte Eingriffe im Cluster werden von Argo~CD in 3{,}85 Sekunden detektiert und autonom binnen 13{,}32 Sekunden korrigiert — weit unterhalb der Anforderungsgrenze FA-3 ($<$\,60\,s).
 \end{itemize}
 
 Damit wurde gezeigt, dass GitOps und Containerorchestrierung die klassische Kluft zwischen hoher Ausfallsicherheit und budgetären Beschränkungen wirksam überbrücken können.

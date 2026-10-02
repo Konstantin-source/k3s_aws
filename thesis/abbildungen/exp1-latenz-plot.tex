@@ -1,0 +1,47 @@
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=0.96\textwidth,
+    height=6.2cm,
+    grid=both,
+    grid style={dotted, gray!40},
+    xlabel={Messzeit $t$ [Sekunden]},
+    ylabel={Median-Latenz $p_{50}$ [ms]},
+    xmin=0, xmax=39,
+    ymin=0, ymax=800,
+    legend pos=north west,
+    legend style={font=\sffamily\scriptsize, fill=white, fill opacity=0.9},
+    label style={font=\sffamily\footnotesize},
+    tick label style={font=\sffamily\scriptsize},
+    title style={font=\sffamily\bfseries\footnotesize},
+]
+
+% Vertikale Markierung fuer Störungsinduktion
+\draw[red!80!black, dashed, line width=1pt] (axis cs:15,0) -- (axis cs:15,800)
+    node[pos=0.88, right, font=\sffamily\scriptsize\bfseries, text=red!80!black] {Störungsinduktion ($t = 15\text{ s}$)};
+
+% Basiskonfiguration (1 Pod)
+\addplot[
+    color=red!75!black,
+    mark=square*,
+    mark size=1.4pt,
+    line width=1.0pt,
+    dashed
+] table[x=second, y=p50_ms, col sep=comma] {daten/exp1-timeseries-1pod.csv};
+\addlegendentry{1 Pod (Basiskonfiguration)}
+
+% Verbesserte Konfiguration (2 Pods)
+\addplot[
+    color=blue!70!black,
+    mark=*,
+    mark size=1.4pt,
+    line width=1.0pt
+] table[x=second, y=p50_ms, col sep=comma] {daten/exp1-timeseries-2pods.csv};
+\addlegendentry{2 Pods (Verbesserte Konfiguration)}
+
+\end{axis}
+\end{tikzpicture}
+\caption{Reaktions- und Antwortzeiten ($p_{50}$-Latenz) im Zeitverlauf vor, während und nach dem Prozessabsturz, eigene Messung.}
+\label{fig:exp1-latenz-verlauf}
+\end{figure}

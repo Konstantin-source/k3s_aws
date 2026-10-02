@@ -1,0 +1,47 @@
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=0.96\textwidth,
+    height=6.2cm,
+    grid=both,
+    grid style={dotted, gray!40},
+    xlabel={Messzeit $t$ [Sekunden]},
+    ylabel={Fehlerrate [\%]},
+    xmin=0, xmax=39,
+    ymin=-2, ymax=55,
+    legend pos=north west,
+    legend style={font=\sffamily\scriptsize, fill=white, fill opacity=0.9},
+    label style={font=\sffamily\footnotesize},
+    tick label style={font=\sffamily\scriptsize},
+    title style={font=\sffamily\bfseries\footnotesize},
+]
+
+% Vertikale Markierung fuer Störungsinduktion
+\draw[red!80!black, dashed, line width=1pt] (axis cs:15,-2) -- (axis cs:15,55)
+    node[pos=0.88, right, font=\sffamily\scriptsize\bfseries, text=red!80!black] {Störungsinduktion ($t = 15\text{ s}$)};
+
+% Basiskonfiguration (1 Pod)
+\addplot[
+    color=red!75!black,
+    mark=square*,
+    mark size=1.4pt,
+    line width=1.0pt,
+    dashed
+] table[x=second, y=error_rate, col sep=comma] {daten/exp1-timeseries-1pod.csv};
+\addlegendentry{1 Pod (Basiskonfiguration)}
+
+% Verbesserte Konfiguration (2 Pods)
+\addplot[
+    color=blue!70!black,
+    mark=*,
+    mark size=1.4pt,
+    line width=1.0pt
+] table[x=second, y=error_rate, col sep=comma] {daten/exp1-timeseries-2pods.csv};
+\addlegendentry{2 Pods (Verbesserte Konfiguration)}
+
+\end{axis}
+\end{tikzpicture}
+\caption{Zeitlicher Verlauf der sekündlichen Fehlerrate bei forciertem Prozessabsturz ($t=15\text{ s}$) unter Last (40 Anfragen/s), eigene Messung.}
+\label{fig:exp1-fehlerrate-verlauf}
+\end{figure}
