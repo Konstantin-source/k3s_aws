@@ -7,7 +7,7 @@ Als Referenz-Workload dient eine in Python mit dem modernen Web-Framework FastAP
 \begin{itemize}
     \item \texttt{GET /}: Liefert eine responsive HTML-Oberfläche aus, die Statusinformationen (aktueller Hostname/Pod-Name, Pod-IP-Adresse, Version und Serverzeit) visualisiert und per JavaScript alle 1{,}5 Sekunden aktualisiert.
     \item \texttt{GET /api/info}: Liefert dieselben Zustandsdaten im maschinenlesbaren JSON-Format für automatisierte Last- und Monitoring-Skripte.
-    \item \texttt{GET /health/live}: Antwortet standardmäßig mit HTTP 200 (\texttt{\{"status": "alive"\}}). Dient der Liveness-Sonde des Kubelets zur Erkennung von Deadlocks.
+    \item \texttt{GET /health/live}: Antwortet standardmäßig mit HTTP 200 (\verb|{"status": "alive"}|). Dient der Liveness-Sonde des Kubelets zur Erkennung von Deadlocks.
     \item \texttt{GET /health/ready}: Gibt Aufschluss über die Betriebsbereitschaft. Über einen internen atomaren Zustandsschalter kann der Status gesteuert werden.
     \item \texttt{POST /lab/crash}: Forciert das sofortige Beenden des gesamten Python-Prozesses durch direkten Aufruf von \texttt{os.\_exit(1)}. Dieser harte Systemaufruf umgeht normale Ausnahmebehandlungen (Exception Handlers) und simuliert einen abrupten SIGKILL-Absturz.
     \item \texttt{POST /lab/toggle-ready}: Schaltet die Rückgabe der Readiness-Prüfung zwischen HTTP 200 und HTTP 503 um, um die dynamische Aussteuerung aus dem Service-Routing zu verifizieren.

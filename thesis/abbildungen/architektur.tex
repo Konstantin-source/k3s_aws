@@ -2,64 +2,71 @@
 \centering
 \begin{tikzpicture}[
     font=\sffamily\footnotesize,
-    node distance=0.8cm and 1.0cm,
-    ext/.style={draw=gray!70, fill=gray!12, rounded corners=3pt, minimum width=2.7cm, minimum height=0.85cm, align=center, font=\sffamily\scriptsize},
-    k8scomp/.style={draw=blue!70!black, fill=blue!8, rounded corners=3pt, minimum width=2.4cm, minimum height=0.8cm, align=center, font=\sffamily\scriptsize},
-    pod/.style={draw=teal!70!black, fill=teal!10, rounded corners=3pt, minimum width=2.8cm, minimum height=0.9cm, align=center, font=\sffamily\scriptsize},
+    every node/.style={align=center},
+    ext/.style={draw=gray!70, fill=gray!12, rounded corners=3pt, minimum width=2.6cm, minimum height=0.8cm, font=\sffamily\scriptsize},
+    k8scomp/.style={draw=blue!70!black, fill=blue!8, rounded corners=3pt, minimum width=2.3cm, minimum height=0.7cm, font=\sffamily\scriptsize},
+    pod/.style={draw=teal!70!black, fill=teal!10, rounded corners=3pt, minimum width=2.6cm, minimum height=0.8cm, font=\sffamily\scriptsize},
     arrow/.style={->, >=stealth, line width=0.8pt, draw=black!80},
-    gitflow/.style={->, >=stealth, line width=0.8pt, dashed, draw=blue!70!black}
+    gitflow/.style={->, >=stealth, line width=0.8pt, dashed, draw=blue!70!black},
+    boxtitle/.style={font=\sffamily\bfseries\scriptsize, anchor=north west}
 ]
 
-% 1. Externe Komponenten
-\node[ext] (client) {\textbf{Client / Lastgenerator}\\HTTP Traffic (15 Req/s)};
-\node[ext, right=1.6cm of client] (github) {\textbf{GitHub Repository}\\\path{k3s_aws (GitOps)}\\{\tiny Source of Truth (Overlays)}};
-\node[ext, right=1.6cm of github] (tf) {\textbf{HashiCorp Terraform}\\{\tiny Day-0 IaC Provisioning}};
+% --- Hintergrund-Boxen (von außen nach innen, zuerst zeichnen) ---
+\begin{scope}[on background layer]
+  % AWS Cloud Box
+  \fill[blue!2, draw=blue!60!black, rounded corners=7pt, line width=0.8pt]
+    (-1.2, -1.0) rectangle (13.2, -10.2);
+  % Subnetz Box
+  \fill[white, draw=gray!50, rounded corners=6pt, line width=0.6pt]
+    (-0.7, -1.5) rectangle (12.7, -9.7);
+  % EC2 Box
+  \fill[orange!3, draw=orange!70!black, rounded corners=5pt, line width=0.8pt]
+    (-0.2, -2.0) rectangle (12.2, -9.2);
+  % k3s Cluster Box
+  \fill[teal!3, draw=teal!60!black, rounded corners=4pt, dashed, line width=0.7pt]
+    (0.3, -2.5) rectangle (11.7, -8.7);
+\end{scope}
 
-% 2. Cluster interne Komponenten
-\node[k8scomp, below=2.4cm of client] (traefik) {\textbf{Traefik Ingress}\\{\tiny Port 80 / 443}};
-\node[k8scomp, right=1.0cm of traefik] (service) {\textbf{ClusterIP Service}\\\texttt{resilience-lab:8000}};
-\node[k8scomp, right=1.0cm of service] (argocd) {\textbf{Argo CD Controller}\\{\tiny Sync \& Self-Heal Loop}};
+% --- Box-Titel ---
+\node[boxtitle, text=blue!80!black] at (-0.9, -1.1)
+  {\textbf{AWS Cloud} (Region: \texttt{eu-central-1}) \textbar{} VPC: \texttt{10.0.0.0/16}};
+\node[boxtitle, text=gray!70!black] at (-0.4, -1.6)
+  {Öffentliches Subnetz (\texttt{10.0.1.0/24}) \textbar{} Security Group};
+\node[boxtitle, text=orange!80!black] at (0.1, -2.1)
+  {\textbf{AWS EC2} (\texttt{t3.small}, Ubuntu 24.04, Elastic IP)};
+\node[boxtitle, text=teal!70!black] at (0.6, -2.6)
+  {\textbf{k3s Cluster} (Control Plane \& Worker, SQLite WAL)};
 
-% Pods
-\node[pod, below=0.9cm of service, xshift=-1.6cm] (pod1) {\textbf{Pod 1: \texttt{resilience-lab}}\\{\tiny FastAPI App (\texttt{1/1 Ready})}\\{\tiny Health: \texttt{/health/live}, \texttt{/ready}}};
-\node[pod, below=0.9cm of service, xshift=1.6cm] (pod2) {\textbf{Pod 2: \texttt{resilience-lab}}\\{\tiny FastAPI App (\texttt{1/1 Ready})}\\{\tiny Health: \texttt{/health/live}, \texttt{/ready}}};
+% --- Externe Komponenten (über der AWS-Box) ---
+\node[ext] (client) at (1.5, 0.3) {\textbf{Client / Lastgenerator}\\HTTP (15 Req/s)};
+\node[ext] (github) at (6.0, 0.3) {\textbf{GitHub Repository}\\{\tiny Source of Truth}};
+\node[ext] (tf) at (10.5, 0.3) {\textbf{Terraform}\\{\tiny Day-0 IaC}};
 
-% 3. K3s Box
-\node[draw=teal!60!black, fill=teal!3, rounded corners=4pt, dashed, line width=0.7pt,
-      fit=(traefik) (argocd) (pod1) (pod2),
-      inner sep=10pt,
-      label={[anchor=north west, font=\sffamily\bfseries\scriptsize, text=teal!70!black]north west:\textbf{k3s Kubernetes Cluster} (Control Plane \& Worker in einer Binärdatei, SQLite WAL)}] (k3sbox) {};
+% --- Cluster-interne Komponenten ---
+\node[k8scomp] (traefik) at (1.5, -3.7) {\textbf{Traefik Ingress}\\{\tiny Port 80 / 443}};
+\node[k8scomp] (service) at (6.0, -3.7) {\textbf{ClusterIP Service}\\{\tiny resilience-lab:8000}};
+\node[k8scomp] (argocd) at (10.5, -3.7) {\textbf{Argo CD}\\{\tiny Sync \& Self-Heal}};
 
-% 4. EC2 Box
-\node[draw=orange!70!black, fill=orange!3, rounded corners=5pt, line width=0.8pt,
-      fit=(k3sbox),
-      inner xsep=10pt, inner ysep=14pt,
-      label={[anchor=north west, font=\sffamily\bfseries\scriptsize, text=orange!80!black]north west:\textbf{AWS EC2 Instanz} (\texttt{t3.small}, Elastic IP: \texttt{63.176.27.134}, Ubuntu 24.04 LTS)}] (ec2box) {};
+% --- Pods ---
+\node[pod] (pod1) at (4.3, -6.2) {\textbf{Pod 1}\\{\tiny FastAPI (\texttt{1/1 Ready})}\\{\tiny \texttt{/health/live}, \texttt{/ready}}};
+\node[pod] (pod2) at (7.7, -6.2) {\textbf{Pod 2}\\{\tiny FastAPI (\texttt{1/1 Ready})}\\{\tiny \texttt{/health/live}, \texttt{/ready}}};
 
-% 5. Subnetz Box
-\node[draw=gray!50, fill=white, rounded corners=6pt, line width=0.6pt,
-      fit=(ec2box),
-      inner xsep=8pt, inner ysep=14pt,
-      label={[anchor=north west, font=\sffamily\bfseries\scriptsize, text=gray!70!black]north west:Öffentliches Subnetz (\texttt{10.0.1.0/24}) \textbar{} Security Group (Ports: 22, 80, 443, 6443)}] (subnetbox) {};
+% --- Pfeile ---
+% Client → Traefik
+\draw[arrow] (client.south) -- (1.5, -1.0) node[right, font=\tiny, pos=0.5] {HTTP:80} -- (traefik.north);
+% Traefik → Service
+\draw[arrow] (traefik.east) -- node[above, font=\tiny] {Reverse Proxy} (service.west);
+% Service → Pods
+\draw[arrow] (service.south) -- ++(0,-0.6) -| (pod1.north);
+\draw[arrow] (service.south) -- ++(0,-0.6) -| (pod2.north);
 
-% 6. VPC / AWS Cloud Box
-\node[draw=blue!60!black, fill=blue!2, rounded corners=7pt, line width=0.8pt,
-      fit=(subnetbox),
-      inner xsep=8pt, inner ysep=15pt,
-      label={[anchor=north west, font=\sffamily\bfseries\scriptsize, text=blue!80!black]north west:\textbf{AWS Cloud (Region: \texttt{eu-central-1} Frankfurt)} \textbar{} VPC: \texttt{10.0.0.0/16} \textbar{} Internet Gateway}] (awsbox) {};
+% GitHub → Argo CD (GitOps)
+\draw[gitflow] (github.south) -- (6.0, -1.0) node[right, font=\tiny, pos=0.5] {Pull Manifests} -- (6.0, -2.0) -| (argocd.north);
+% Argo CD → Pods (Reconcile)
+\draw[gitflow] (argocd.south) -- ++(0,-0.6) -| node[pos=0.3, below, font=\tiny] {Reconcile \& Self-Heal} (pod2.north east);
 
-% Pfeile und Verbindungen
-\draw[arrow] (client) -- node[right, font=\tiny] {HTTP:80} (client |- awsbox.north);
-\draw[arrow] (client |- awsbox.north) -- (traefik);
-\draw[arrow] (traefik) -- node[above, font=\tiny] {Reverse Proxy} (service);
-\draw[arrow] (service.south) -- ++(0,-0.3) -| (pod1.north);
-\draw[arrow] (service.south) -- ++(0,-0.3) -| (pod2.north);
-
-\draw[gitflow] (github) -- node[right, font=\tiny] {Git Pull Manifests} (github |- awsbox.north);
-\draw[gitflow] (github |- awsbox.north) -- (argocd);
-\draw[gitflow] (argocd.south) -- ++(0,-0.3) -| node[pos=0.3, below, font=\tiny] {Reconcile \& Self-Heal} (pod2.north);
-
-\draw[arrow, dashed, draw=orange!80!black] (tf) -- node[right, font=\tiny] {Day-0 Cloud-Init} (tf |- awsbox.north);
+% Terraform → EC2
+\draw[arrow, dashed, draw=orange!80!black] (tf.south) -- node[right, font=\tiny] {Cloud-Init} (10.5, -1.0);
 
 \end{tikzpicture}
 \caption{System- und Netzwerkarchitektur der GitOps-gesteuerten Kubernetes-Umgebung auf AWS, eigene Darstellung.}

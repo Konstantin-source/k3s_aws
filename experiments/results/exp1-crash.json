@@ -1,25 +1,35 @@
 {
   "experiment": "Experiment 1 - Prozessabsturz (1 Pod vs 2 Pods)",
-  "timestamp_iso": "2026-10-01T08:03:02.928566+00:00",
-  "git_commit": "9a3468f",
+  "timestamp_iso": "2026-10-02T10:08:37.542434+00:00",
+  "target_ip": "3.64.33.245",
+  "parameters": {
+    "duration_seconds": 40,
+    "requests_per_second": 40,
+    "total_requests_per_run": 1600,
+    "crash_at_second": 15
+  },
   "comparison": {
     "single_replica_baseline": {
       "label": "1 Replica (Basiskonfiguration)",
-      "total_requests": 525,
-      "successful_requests": 517,
-      "failed_requests": 8,
-      "error_rate_percent": 1.52,
-      "latency_p50_ms": 50.75,
-      "latency_p95_ms": 162.06
+      "total_requests": 1600,
+      "successful_requests": 1580,
+      "failed_requests": 20,
+      "error_rate_percent": 1.25,
+      "availability_percent": 98.75,
+      "latency_p50_ms": 175.96,
+      "latency_p95_ms": 460.82,
+      "timeseries_file": "experiments/results/exp1-timeseries-1pod.csv"
     },
     "multi_replica_improved": {
       "label": "2 Replicas (Verbesserte Konfiguration)",
-      "total_requests": 525,
-      "successful_requests": 518,
-      "failed_requests": 7,
-      "error_rate_percent": 1.33,
-      "latency_p50_ms": 55.2,
-      "latency_p95_ms": 159.81
+      "total_requests": 1600,
+      "successful_requests": 1567,
+      "failed_requests": 33,
+      "error_rate_percent": 2.06,
+      "availability_percent": 97.94,
+      "latency_p50_ms": 198.37,
+      "latency_p95_ms": 702.76,
+      "timeseries_file": "experiments/results/exp1-timeseries-2pods.csv"
     }
   }
 }
