@@ -53,7 +53,7 @@ spec:
             failureThreshold: 3
           readinessProbe:
             httpGet:
-              path: /health/broken-endpoint-404
+              path: /health/ready
               port: http
             initialDelaySeconds: 3
             periodSeconds: 3
