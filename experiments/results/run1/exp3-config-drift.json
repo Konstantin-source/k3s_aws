@@ -1,0 +1,14 @@
+{
+  "experiment": "Experiment 3 - Konfigurationsabweichung und Self-Heal",
+  "date_iso": "2026-11-05T10:52:44.665618+00:00",
+  "metrics": {
+    "initial_sync": "Synced",
+    "scale_command_duration_s": 0.28,
+    "drift_visible": true,
+    "argo_revert_s": 1.59,
+    "full_recovery_s": 8.7,
+    "poll_interval_note": "ca. 0.7 s je kubectl-aufruf",
+    "success": true
+  },
+  "timeseries_file": "experiments/results/exp3-timeseries.csv"
+}

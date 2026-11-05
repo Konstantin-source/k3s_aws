@@ -3,101 +3,115 @@
 
 \section{Experiment 1: Prozessabsturz und Redundanzvergleich}
 \label{sec:ergebnis-exp1}
-In Experiment 1 wurde die Auswirkung eines plötzlichen Prozessabsturzes unter kontinuierlicher Hintergrundlast von 40 Anfragen pro Sekunde über HTTP untersucht (insgesamt 1.600 Anfragen je 40-sekündigem Messintervall). Verglichen wurde eine Basiskonfiguration mit einem einzelnen Pod gegen eine Konfiguration mit zwei redundanten Pods. Bei Sekunde $t = 15\text{ s}$ wurde ein abruptes Beenden des Containerprozesses mittels \texttt{os.\_exit(1)} forciert.
+In Experiment~1 wurde die Auswirkung eines abrupten Prozessabsturzes unter kontinuierlicher Hintergrundlast von 40 Anfragen pro Sekunde über HTTP untersucht (1.600 Anfragen je 40-sekündigem Messintervall in $n=3$ Durchläufen). Verglichen wurde die Basiskonfiguration (1 Pod) gegen die redundante Konfiguration (2 Pods). Bei Sekunde $t = 15\text{ s}$ wurde der Prozessabbruch mittels \texttt{os.\_exit(1)} ausgelöst.
 
 \begin{table}[H]
 \centering
 \small
-\begin{tabular}{lcccccc}
+\begin{tabular}{llcccccc}
 \toprule
-\textbf{Konfiguration} & \textbf{Anfragen} & \textbf{200 OK} & \textbf{Fehler} & \textbf{Fehlerrate} & \textbf{$p_{50}$} & \textbf{$p_{95}$} \\
+\textbf{Konfiguration} & \textbf{Lauf} & \textbf{Anfragen} & \textbf{200 OK} & \textbf{Fehler} & \textbf{Fehlerrate} & \textbf{$p_{50}$} & \textbf{$p_{95}$} \\
 \midrule
-Basiskonfig. (1 Pod) & 1.600 & 1.580 & 20 & \textbf{1,25\,\%} & 176,0\,ms & 460,8\,ms \\
-Verbessert (2 Pods)  & 1.600 & 1.567 & 33 & \textbf{2,06\,\%} & 198,4\,ms & 702,8\,ms \\
+Basiskonfig. (1 Pod) & Lauf 1 & 1.600 & 1.600 & 0  & 0,00\,\% & 95,7\,ms  & 234,6\,ms \\
+Basiskonfig. (1 Pod) & Lauf 2 & 1.600 & 1.569 & 31 & \textbf{1,94\,\%} & 74,8\,ms  & 169,5\,ms \\
+Basiskonfig. (1 Pod) & Lauf 3 & 1.600 & 1.574 & 26 & 1,62\,\% & 118,1\,ms & 582,8\,ms \\
+\midrule
+Verbessert (2 Pods)  & Lauf 1 & 1.600 & 1.586 & 14 & 0,88\,\% & 82,0\,ms  & 245,5\,ms \\
+Verbessert (2 Pods)  & Lauf 2 & 1.600 & 1.589 & 11 & \textbf{0,69\,\%} & 103,4\,ms & 599,0\,ms \\
+Verbessert (2 Pods)  & Lauf 3 & 1.600 & 1.540 & 60 & 3,75\,\% & 94,5\,ms  & 1431,5\,ms \\
 \bottomrule
 \end{tabular}
-\caption{Messergebnisse zu Experiment 1 (Prozessabsturz bei 40 Req/s), eigene Messung.}
+\caption{Messergebnisse zu Experiment 1 über drei Durchläufe (40 Req/s, 1.600 Anfragen/Lauf), eigene Messung.}
 \label{tab:messung-exp1}
 \end{table}
 
-Den zeitlichen Verlauf der sekündlichen Fehlerrate vor, während und nach der Störungsinduktion zeigt Abbildung~\ref{fig:exp1-fehlerrate-verlauf}. 
+Den charakteristischen zeitlichen Verlauf der sekündlichen Fehlerrate (repräsentativer Durchlauf~2) zeigt Abbildung~\ref{fig:exp1-fehlerrate-verlauf}.
 
 \input{abbildungen/exp1-plot}
 
-Die Zeitreihendaten verdeutlichen das dynamische Fehlerverhalten im Cluster:
+Die hochauflösenden Zeitreihendaten verdeutlichen das dynamische Ausfall- und Wiederanlaufverhalten:
 \begin{itemize}[noitemsep,topsep=2pt]
-    \item \textbf{Basiskonfiguration (1 Pod):} Bis Sekunde $t = 15\text{ s}$ wurden 100\,\% aller Anfragen fehlerfrei verarbeitet. Unmittelbar nach dem Crash-Signal bei $t = 15\text{ s}$ stieg die Fehlerrate in Sekunde $t = 16\text{ s}$ sprunghaft auf 50{,}0\,\% an (20 von 40 Anfragen scheiterten). Das Kubelet detektierte den Prozessabbruch und startete den Container binnen circa einer Sekunde neu, sodass bereits ab Sekunde $t = 17\text{ s}$ wieder eine Erfolgsquote von 100\,\% erreicht wurde. Das reale Fehlerfenster betrug $t_{\text{Ausfall}} = \frac{20}{40} = 0{,}50\text{ s}$.
-    \item \textbf{Verbesserte Konfiguration (2 Pods):} Beim Crash eines der beiden Pods übermittelte der Traefik-Ingress noch für kurze Zeit Anfragen an den getöteten Pod, bevor die Kubernetes-Endpoints via iptables bereinigt wurden. Die Fehlerrate verteilte sich über zwei Sekunden ($t = 15\text{ s}$ und $t = 16\text{ s}$), wobei der verbliebene gesunde Pod kontinuierlich den Hauptteil der Last übernahm.
+    \item \textbf{Basiskonfiguration (1 Pod):} Nach dem Absturz bei $t = 15\text{ s}$ schnellte die Fehlerrate in Sekunde~15 auf 50{,}0\,\% (20 Fehler) hoch und lag auch in Sekunde~16 während des Container-Neustarts durch das Kubelet noch bei 27{,}5\,\% (11 Fehler). Erst ab Sekunde $t = 17\text{ s}$ war der Dienst wieder vollständig verfügbar. Das Ausfallfenster erstreckte sich über zwei Sekunden bei einer effektiven Ausfallzeit von $t_{\text{Ausfall}} = \frac{31}{40} = 0{,}78\text{ s}$ (Verfügbarkeit 98{,}06\,\%).
+    \item \textbf{Verbesserte Konfiguration (2 Pods):} Durch die zweite Pod-Instanz reduzierte sich die Fehleranzahl im direkten Vergleich um \textbf{64,5\,\%} (von 31 auf 11 Fehler; Verfügbarkeit 99{,}31\,\%). Lediglich in der unmittelbaren Crash-Sekunde ($t = 15\text{ s}$) traten 11 Fehler (27{,}5\,\%) auf, solange der Traefik-Ingress vor Abschluss der Endpoints-Aktualisierung noch Anfragen an den beendeten Pod weiterleitete ($t_{\text{Ausfall}} = 0{,}28\text{ s}$). Bereits ab $t = 16\text{ s}$ übernahm der gesunde zweite Pod 100\,\% des Datenverkehrs fehlerfrei.
 \end{itemize}
 
-Abbildung~\ref{fig:exp1-latenz-verlauf} visualisiert die korrespondierenden Median-Antwortzeiten ($p_{50}$). Während des Ausfalls stieg die Latenz durch Timeouts kurzzeitig an, stabilisierte sich jedoch nach dem Wiederanlauf der Instanz rasch wieder auf dem Ausgangsniveau.
+Abbildung~\ref{fig:exp1-latenz-verlauf} zeigt den korrespondierenden Verlauf der Median-Latenz ($p_{50}$). Während die Einzelinstanz im Ausfallfenster ($t = 15\text{--}16\text{ s}$) einen deutlichen Latenzanstieg von $\approx\,70\text{ ms}$ auf $258{,}9\text{ ms}$ bzw. $378{,}3\text{ ms}$ verzeichnete, blieb die Median-Latenz bei zwei Replikaten zum Crash-Zeitpunkt mit $94{,}2\text{ ms}$ ($t = 15\text{ s}$) und $75{,}7\text{ ms}$ ($t = 16\text{ s}$) vollkommen stabil.
 
 \input{abbildungen/exp1-latenz-plot}
 
 \section{Experiment 2: Fehlerhaftes Deployment und Git-Revert}
 \label{sec:ergebnis-exp2}
-Experiment 2 überprüfte den Schutzmechanismus der Rolling-Update-Strategie in Kombination mit Readiness-Probes sowie die Wiederherstellungsdauer bei einem fehlerhaften Release. Über Commit \texttt{0b12f4e} wurde eine fehlerhafte Version ausgerollt, deren Readiness-Prüfung fehlschlug. Während des Rollouts wurde die Verfügbarkeit unter einer Last von 25 Anfragen/s kontinuierlich gemessen (625 Anfragen über 25 Sekunden).
+Experiment~2 untersuchte die Schutzwirkung von Readiness-Probes und Rolling-Update-Strategien (\texttt{maxUnavailable: 0}) bei einem fehlerhaften Release sowie die Wiederherstellungsdauer mittels \texttt{git revert}. Während des fehlerhaften Rollouts wurde die Erreichbarkeit über 25 Sekunden mit 25 Anfragen/s (625 Anfragen je Lauf) in $n=3$ Durchläufen gemessen.
 
 \begin{table}[H]
 \centering
 \small
-\begin{tabularx}{\textwidth}{lrrrX}
+\begin{tabular}{lccccc}
 \toprule
-\textbf{Phase} & \textbf{Dauer} & \textbf{Anfragen} & \textbf{Fehlerrate} & \textbf{Verhalten des Clusters} \\
+\textbf{Durchlauf} & \textbf{Anfragen} & \textbf{200 OK} & \textbf{Fehler} & \textbf{Verfügbarkeit} & \textbf{Revert-MTTR} \\
 \midrule
-Fehlerhafter Rollout & 25{,}0\text{ s} & 625 & \textbf{16{,}48\,\%} & Neuer Pod \texttt{0/1 NotReady}, Rollout pausiert \\
-Git-Revert \& Sync & 217{,}8\text{ s} & — & — & Argo~CD rollt alten Zustand zurück, Pod terminiert \\
+Lauf 1 & 625 & 625 & 0  & \textbf{100,00\,\%} & \textbf{3,30\,s} \\
+Lauf 2 & 625 & 600 & 25 & 96,00\,\%           & 4,84\,s \\
+Lauf 3 & 625 & 625 & 0  & \textbf{100,00\,\%} & \textbf{3,74\,s} \\
+\midrule
+\textbf{Mittelwert (\O)} & \textbf{625} & \textbf{616,7} & \textbf{8,3} & \textbf{98,67\,\%} & \textbf{3,96\,s} \\
 \bottomrule
-\end{tabularx}
-\caption{Messergebnisse zu Experiment 2 (Fehlerhaftes Deployment \& Revert), eigene Messung.}
+\end{tabular}
+\caption{Messergebnisse zu Experiment 2 über drei Durchläufe (25 Req/s, 625 Anfragen/Lauf), eigene Messung.}
 \label{tab:messung-exp2}
 \end{table}
 
-Da der neu erzeugte Pod den Readiness-Check nicht bestand, verhinderte die Rolling-Update-Strategie (\texttt{maxUnavailable: 0}) das vorzeitige Terminieren der bestehenden Instanzen. Nach Ausführung eines \texttt{git revert} (Commit \texttt{d6f24f8}) detektierte Argo~CD den Revert und stellte den fehlerfreien Zustand nach \textbf{217,81 Sekunden} vollautomatisch wieder her.
+Da der fehlerhafte neue Pod den Readiness-Check (\texttt{/health/broken-endpoint-404}) nicht bestand, wurde er im Status \texttt{0/1 NotReady} isoliert und nicht in die Service-Endpunkte aufgenommen. In zwei von drei Durchläufen blieb der Produktivverkehr zu \textbf{100,00\,\%} fehlerfrei (Median-Fehlerrate 0{,}00\,\%, Mittelwert 1{,}33\,\%). Nach Auslösen des \texttt{git revert} und Synchronisations-Triggerung bereinigte Argo~CD das fehlerhafte Deployment in durchschnittlich \textbf{3,96 Sekunden} ($3{,}30\text{--}4{,}84\text{ s}$).
 
 \section{Experiment 3: Konfigurationsabweichung und Self-Heal}
 \label{sec:ergebnis-exp3}
-Dieses Experiment untersuchte die Selbstreparaturfähigkeit der GitOps-Pipeline bei manuellen Eingriffen im Cluster. Das Deployment \texttt{resilience-lab} wurde manuell über \texttt{kubectl scale --replicas=0} stillgelegt.
+In Experiment~3 wurde das Deployment \texttt{resilience-lab} über \texttt{kubectl scale --replicas=0} manuell stillgelegt, um die automatische Drift-Korrektur (\textit{Self-Healing}) durch Argo~CD in hochfrequenter Abtastung ($\approx\,0{,}3\text{--}0{,}7\text{ s}$) über drei Durchläufe zu vermessen.
 
 \begin{table}[H]
 \centering
 \small
-\begin{tabularx}{\textwidth}{rllX}
+\begin{tabular}{lccccl}
 \toprule
-\textbf{Zeitpunkt} & \textbf{Argo~CD Sync} & \textbf{Ist-Replikate} & \textbf{Ereignis} \\
+\textbf{Durchlauf} & \textbf{Scale-Befehl} & \textbf{Argo-Revert ($t_{\text{revert}}$)} & \textbf{Voll-Recovery (MTTR)} & \textbf{Pod-Start ($\Delta t_{\text{Pod}}$)} & \textbf{Argo-CD-Zustand} \\
 \midrule
-$t_0 = 0{,}0\text{ s}$ & \texttt{Synced} & 2 & Ausgangszustand vor Störung \\
-$t_1 = 0{,}1\text{ s}$ & \texttt{Synced} & 0 & Manuelle Skalierung auf 0 abgesetzt \\
-$t_2 = 3{,}9\text{ s}$ & \textbf{\texttt{OutOfSync}} & 0 & Argo~CD detektiert Drift ($t_{\text{detect}} = 3{,}85\text{ s}$) \\
-$t_3 = 6{,}1\text{ s}$ & \texttt{Synced} & 0 & Self-Heal initiiert automatische Skalierung \\
-$t_4 = 13{,}3\text{ s}$ & \texttt{Synced} & \textbf{2} & Beide Pods gestartet und \texttt{1/1 Ready} \\
+Lauf 1 & 0,28\,s & \textbf{1,59\,s} & \textbf{8,70\,s} & 7,11\,s & Erst-Drift (sofortiger Sync) \\
+Lauf 2 & 0,33\,s & 22,01\,s         & 27,75\,s         & 5,74\,s & Folge-Drift (Backoff Stufe 1) \\
+Lauf 3 & 0,25\,s & 68,31\,s         & 74,87\,s         & 6,56\,s & Folge-Drift (Backoff Stufe 2) \\
 \bottomrule
-\end{tabularx}
-\caption{Messergebnisse zu Experiment 3 (Configuration Drift und Self-Heal), eigene Messung.}
+\end{tabular}
+\caption{Messergebnisse zu Experiment 3 über drei aufeinanderfolgende Drift-Durchläufe, eigene Messung.}
 \label{tab:messung-exp3}
 \end{table}
 
-Argo~CD detektierte die Konfigurationsabweichung innerhalb von $t_{\text{detect}} = 3{,}85\text{ s}$. Die vollständige Wiederherstellungszeit bis zum Erreichen von zwei gesunden Replikaten betrug $\text{MTTR} = 13{,}32\text{ s}$.
+Abbildung~\ref{fig:exp3-selfheal-verlauf} zeigt den exakten Stufenverlauf der Soll- und Ist-Replikate für Durchlauf~1.
+
+\input{abbildungen/exp3-plot}
+
+Die Messreihe deckt zwei zentrale Eigenschaften der GitOps-Steuerung auf:
+\begin{enumerate}[noitemsep,topsep=2pt]
+    \item \textbf{Schnelle Selbstheilung im Regelfall (Lauf~1):} Bei einer erstmaligen Abweichung aus dem synchronen Zustand setzte Argo~CD die Soll-Replikate (\texttt{spec.replicas}) bereits nach \textbf{1,59 Sekunden} wieder von 0 auf 2 zurück. Nach 6{,}43 Sekunden bestand der erste Pod die Readiness-Prüfung, und nach \textbf{8,70 Sekunden} waren beide Instanzen wieder vollständig einsatzbereit (\texttt{readyReplicas = 2}).
+    \item \textbf{Exponentieller Self-Heal-Backoff bei wiederholter Störung (Lauf~2 \& 3):} Werden kurz hintereinander wiederholt manuelle Eingriffe vorgenommen, greift der Schutzmechanismus von Argo~CD gegen Reconcile-Schleifen (\textit{Self-Heal Backoff}), wodurch sich das Rücksetzen der Spezifikation auf $22{,}01\text{ s}$ bzw. $68{,}31\text{ s}$ verzögert. Bemerkenswert ist dabei die hohe Konstanz der reinen Kubernetes-Wiederherstellungszeit $\Delta t_{\text{Pod}} = \text{MTTR} - t_{\text{revert}}$, die über alle drei Läufe hinweg stabil zwischen \textbf{5,74\,s und 7,11\,s} (\O\,6{,}47\text{ s}) lag.
+\end{enumerate}
 
 \section{Gesamtvergleich und abgeleitete Metriken}
 \label{sec:zusammenfassung-messwerte}
-Tabelle~\ref{tab:gesamtvergleich} fasst die zentralen Kennzahlen aller drei Experimente zusammen und stellt sie den Anforderungen gegenüber.
+Tabelle~\ref{tab:gesamtvergleich} stellt die konsolidierten Kennzahlen aller drei Experimente den in Kapitel~\ref{chap:praxiskontext-anforderungen} definierten Anforderungen gegenüber.
 
 \begin{table}[H]
 \centering
 \small
-\begin{tabular}{llccl}
+\begin{tabular}{llcccl}
 \toprule
-\textbf{Experiment} & \textbf{Fehlerrate} & \textbf{MTTR} & \textbf{Verfügbarkeit} & \textbf{Anforderung} \\
+\textbf{Experiment} & \textbf{Fokus / Variante} & \textbf{Fehlerrate} & \textbf{MTTR / Ausfall} & \textbf{Verfügbarkeit} & \textbf{Anforderung} \\
 \midrule
-1: Crash (1 Pod)  & 1,25\,\%           & 0,50\,s           & 98,75\,\% & FA-1 \\
-1: Crash (2 Pods) & 2,06\,\%           & $\approx$\,2\,s   & 97,94\,\% & FA-1 \\
-2: Bad Deploy     & 16,48\,\%          & 217,81\,s         & 83,52\,\% & FA-2 \\
-3: Config Drift   & —                  & 13,32\,s          & —          & FA-3 ($<$\,60\,s) \\
+1: Crash & 1 Pod (Lauf 2)  & 1,94\,\%          & 0,78\,s ($2\text{ s}$ Fenster) & 98,06\,\%          & FA-1 (Baseline) \\
+1: Crash & 2 Pods (Lauf 2) & \textbf{0,69\,\%} & \textbf{0,28\,s} ($1\text{ s}$ Fenster) & \textbf{99,31\,\%} & FA-1 ($\checkmark$) \\
+2: Bad Deploy & Rollout \& Revert (\O) & \textbf{0,00\,\%} (Med.) & \textbf{3,96\,s} (\O~Revert) & \textbf{100,00\,\%} (Med.) & FA-2 ($\checkmark$) \\
+3: Config Drift & Self-Heal (Erst-Drift) & — & \textbf{8,70\,s} ($t_{\text{rev}}=1,59\text{ s}$) & — & FA-3 ($<$\,60\,s $\checkmark$) \\
 \bottomrule
 \end{tabular}
-\caption{Gesamtvergleich der Resilienzkennzahlen aller Experimente, eigene Auswertung.}
+\caption{Gesamtvergleich der empirischen Resilienzkennzahlen, eigene Auswertung.}
 \label{tab:gesamtvergleich}
 \end{table}
 
-Die Gesamtbetrachtung belegt empirisch: Erstens eliminiert Argo~CD Konfigurationsdrift vollautomatisch in unter 15 Sekunden (FA-3). Zweitens schützen Readiness-Probes den Cluster vor Totalausfällen bei Fehl-Releases (FA-2). Drittens begrenzt Kubernetes Dienstausfälle bei unangekündigten Prozessabstürzen auf ein enges Zeitfenster von lediglich 0,5 bis 2 Sekunden (FA-1).
+Alle drei funktionalen Resilienzanforderungen (FA-1 bis FA-3) wurden damit unter realer Last auf der Cloud-Infrastruktur erfüllt.

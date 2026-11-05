@@ -1,18 +1,18 @@
 {
   "experiment": "Experiment 2 - Fehlerhaftes Deployment und Git Revert",
-  "timestamp_iso": "2026-10-02T10:13:22.155074+00:00",
-  "target_ip": "3.64.33.245",
+  "timestamp_iso": "2026-11-05T10:36:14.424649+00:00",
+  "target_ip": "18.197.241.64",
   "commits": {
-    "initial": "9cddb9bb2d9b7e35caa5f79bd3e01e4b2db7fafa",
-    "revert": "d6f24f851d95839202fd70c547816fe52b93947d"
+    "initial": "4b17af088f83c206c8971a814de8afbd7bbe7bee",
+    "revert": "2da8018d8295e6b6b851634299217bb770721df4"
   },
   "traffic_during_bad_rollout": {
     "total_requests": 625,
-    "successful_requests": 522,
-    "failed_requests": 103,
-    "error_rate_percent": 16.48,
-    "availability_percent": 83.52
+    "successful_requests": 625,
+    "failed_requests": 0,
+    "error_rate_percent": 0.0,
+    "availability_percent": 100.0
   },
-  "recovery_time_seconds": 217.81,
+  "recovery_time_seconds": 3.3,
   "timeseries_file": "experiments/results/exp2-timeseries.csv"
 }

@@ -1,0 +1,46 @@
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=0.96\textwidth,
+    height=4.5cm,
+    grid=both,
+    grid style={dotted, gray!40},
+    xlabel={Messzeit $t$ [Sekunden]},
+    ylabel={Anzahl Replikate},
+    xmin=0, xmax=10,
+    ymin=-0.2, ymax=2.5,
+    ytick={0, 1, 2},
+    legend pos=south east,
+    legend style={font=\sffamily\scriptsize, fill=white, fill opacity=0.9},
+    label style={font=\sffamily\footnotesize},
+    tick label style={font=\sffamily\scriptsize},
+    title style={font=\sffamily\bfseries\footnotesize},
+]
+
+% Soll-Zustand (spec.replicas)
+\addplot[
+    const plot,
+    color=orange!85!black,
+    mark=square*,
+    mark size=1.3pt,
+    line width=1.1pt,
+    dashed
+] table[x=elapsed_s, y=desired_replicas, col sep=comma] {daten/exp3-timeseries.csv};
+\addlegendentry{Soll-Replikate (\texttt{spec.replicas})}
+
+% Ist-Zustand (status.readyReplicas)
+\addplot[
+    const plot,
+    color=blue!70!black,
+    mark=*,
+    mark size=1.3pt,
+    line width=1.1pt
+] table[x=elapsed_s, y=ready_replicas, col sep=comma] {daten/exp3-timeseries.csv};
+\addlegendentry{Bereite Replikate (\texttt{readyReplicas})}
+
+\end{axis}
+\end{tikzpicture}
+\caption{Zeitlicher Verlauf der Soll- und Ist-Replikate bei manueller Skalierung auf 0 und automatischer Wiederherstellung durch Argo~CD Self-Heal (Durchlauf 1), eigene Messung.}
+\label{fig:exp3-selfheal-verlauf}
+\end{figure}

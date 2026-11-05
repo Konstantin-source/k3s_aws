@@ -2,40 +2,45 @@
 \appendixentry{Messprotokolle und Rohdaten der Störungsexperimente}
 \label{app:messprotokolle}
 
-In diesem Anhang sind die maschinenlesbaren Konfigurationen, Ausführungsbefehle und Rohdatenprotokolle der drei durchgeführten Störungsexperimente dokumentiert.
+In diesem Anhang sind die Ausführungsbefehle und die maschinenlesbaren JSON-Rohdatenprotokolle der Störungsexperimente dokumentiert (die zugehörigen sekündlichen CSV-Zeitreihen liegen im Repository unter \texttt{experiments/results/}).
 
 \section{Experiment 1: Prozessabsturz und Redundanzvergleich}
 \label{app:exp1-daten}
-Zur Durchführung des Last- und Störungstests wurde das nachfolgende Python-Kommando ausgeführt. Es sendet kontinuierlich 15 Anfragen pro Sekunde und induziert bei Sekunde 12 über den Labor-Endpunkt einen Prozessabsturz:
-\begin{lstlisting}[language=bash, caption={Ausführungsbefehl zu Experiment 1}]
-python experiments/exp1_crash_test.py \
-  --url http://63.176.27.134/api/info \
-  --crash-url http://63.176.27.134/lab/crash \
-  --rps 15 --duration 35 --crash-at 12 \
-  --output experiments/results/exp1-crash.json
-\end{lstlisting}
+Das Testskript \texttt{experiments/scripts/run-exp1-crash.py} sendet über 40 Sekunden kontinuierlich 40 Anfragen pro Sekunde (1.600 Anfragen je Lauf) und induziert bei Sekunde $t = 15\text{ s}$ über den Labor-Endpunkt einen Prozessabsturz:
 
-\begin{lstlisting}[language=json, caption={Rohdatenprotokoll exp1-crash.json}, basicstyle=\fontsize{8}{10}\ttfamily]
+\begin{lstlisting}[language=json, caption={Rohdatenprotokoll exp1-crash.json (Repräsentativer Durchlauf 2)}, basicstyle=\fontsize{8}{10}\ttfamily]
 {
   "experiment": "Experiment 1 - Prozessabsturz (1 Pod vs 2 Pods)",
-  "timestamp_iso": "2026-10-01T08:03:02.928566+00:00",
-  "git_commit": "9a3468f",
+  "timestamp_iso": "2026-11-05T10:43:52.442878+00:00",
+  "target_ip": "18.197.241.64",
+  "parameters": {
+    "duration_seconds": 40,
+    "requests_per_second": 40,
+    "total_requests_per_run": 1600,
+    "crash_at_second": 15
+  },
   "comparison": {
     "single_replica_baseline": {
-      "total_requests": 525,
-      "successful_requests": 517,
-      "failed_requests": 8,
-      "error_rate_percent": 1.52,
-      "latency_p50_ms": 50.75,
-      "latency_p95_ms": 162.06
+      "label": "1 Replica (Basiskonfiguration)",
+      "total_requests": 1600,
+      "successful_requests": 1569,
+      "failed_requests": 31,
+      "error_rate_percent": 1.94,
+      "availability_percent": 98.06,
+      "latency_p50_ms": 74.81,
+      "latency_p95_ms": 169.48,
+      "timeseries_file": "experiments/results/exp1-timeseries-1pod.csv"
     },
     "multi_replica_improved": {
-      "total_requests": 525,
-      "successful_requests": 518,
-      "failed_requests": 7,
-      "error_rate_percent": 1.33,
-      "latency_p50_ms": 55.2,
-      "latency_p95_ms": 159.81
+      "label": "2 Replicas (Verbesserte Konfiguration)",
+      "total_requests": 1600,
+      "successful_requests": 1589,
+      "failed_requests": 11,
+      "error_rate_percent": 0.69,
+      "availability_percent": 99.31,
+      "latency_p50_ms": 103.44,
+      "latency_p95_ms": 598.98,
+      "timeseries_file": "experiments/results/exp1-timeseries-2pods.csv"
     }
   }
 }
@@ -43,51 +48,46 @@ python experiments/exp1_crash_test.py \
 
 \section{Experiment 2: Fehlerhaftes Release und Git-Revert}
 \label{app:exp2-daten}
-Das nachfolgende Testskript simulierte ein fehlerhaftes Release mit fehlschlagender Readiness-Sonde und maß die Latenzen sowie die Wiederherstellungsdauer nach einem automatisierten \texttt{git revert}:
-\begin{lstlisting}[language=bash, caption={Ausführungsbefehl zu Experiment 2}]
-python experiments/exp2_bad_deploy.py \
-  --repo-dir . \
-  --service-url http://63.176.27.134/api/info \
-  --output experiments/results/exp2-bad-deploy.json
-\end{lstlisting}
+Das Skript \texttt{experiments/scripts/run-exp2-bad-deploy.py} simuliert ein fehlerhaftes Release mit fehlschlagender Readiness-Sonde unter Last (25 Req/s über 25\,s) und misst die Wiederherstellungsdauer nach einem automatisierten \texttt{git revert}:
 
-\begin{lstlisting}[language=json, caption={Rohdatenprotokoll exp2-bad-deploy.json}, basicstyle=\fontsize{8}{10}\ttfamily]
+\begin{lstlisting}[language=json, caption={Rohdatenprotokoll exp2-bad-deploy.json (Durchlauf 1)}, basicstyle=\fontsize{8}{10}\ttfamily]
 {
   "experiment": "Experiment 2 - Fehlerhaftes Deployment und Git Revert",
-  "timestamp_iso": "2026-10-01T08:04:58.168213+00:00",
+  "timestamp_iso": "2026-11-05T10:36:14.424649+00:00",
+  "target_ip": "18.197.241.64",
   "commits": {
-    "initial": "9a3468f11285c955a17e6980c57aeeef63274a73",
-    "revert": "2d34aca6a4759d14acaf2d2af6c43ff1145ed189"
+    "initial": "4b17af088f83c206c8971a814de8afbd7bbe7bee",
+    "revert": "2da8018d8295e6b6b851634299217bb770721df4"
   },
   "traffic_during_bad_rollout": {
-    "total_requests": 200,
-    "successful_requests": 200,
+    "total_requests": 625,
+    "successful_requests": 625,
     "failed_requests": 0,
-    "error_rate_percent": 0.0
+    "error_rate_percent": 0.0,
+    "availability_percent": 100.0
   },
-  "recovery_time_seconds": 37.19
+  "recovery_time_seconds": 3.3,
+  "timeseries_file": "experiments/results/exp2-timeseries.csv"
 }
 \end{lstlisting}
 
 \section{Experiment 3: Konfigurationsdrift und Argo-CD-Self-Heal}
 \label{app:exp3-daten}
-Das Überwachungsskript skalierte das Deployment imperativ auf 0 Replikate und stoppte die Zeitspanne bis zur automatischen Selbstreparatur durch Argo~CD:
-\begin{lstlisting}[language=bash, caption={Ausführungsbefehl zu Experiment 3}]
-python experiments/exp3_config_drift.py \
-  --deployment resilience-lab \
-  --namespace default \
-  --app-name resilience-lab \
-  --output experiments/results/exp3-config-drift.json
-\end{lstlisting}
+Das Skript \texttt{experiments/scripts/run-exp3-drift.py} skaliert das Deployment imperativ auf 0 Replikate und protokolliert die Zeitspanne bis zur automatischen Selbstreparatur durch Argo~CD:
 
-\begin{lstlisting}[language=json, caption={Rohdatenprotokoll exp3-config-drift.json}, basicstyle=\fontsize{8}{10}\ttfamily]
+\begin{lstlisting}[language=json, caption={Rohdatenprotokoll exp3-config-drift.json (Durchlauf 1)}, basicstyle=\fontsize{8}{10}\ttfamily]
 {
   "experiment": "Experiment 3 - Konfigurationsabweichung und Self-Heal",
-  "git_commit": "07a858dac10fe5e76bec13440a743e7a9331bd21",
+  "date_iso": "2026-11-05T10:52:44.665618+00:00",
   "metrics": {
-    "detection_duration_seconds": 2.58,
-    "total_recovery_duration_seconds": 11.28,
+    "initial_sync": "Synced",
+    "scale_command_duration_s": 0.28,
+    "drift_visible": true,
+    "argo_revert_s": 1.59,
+    "full_recovery_s": 8.7,
+    "poll_interval_note": "ca. 0.7 s je kubectl-aufruf",
     "success": true
-  }
+  },
+  "timeseries_file": "experiments/results/exp3-timeseries.csv"
 }
 \end{lstlisting}

@@ -1,0 +1,35 @@
+{
+  "experiment": "Experiment 1 - Prozessabsturz (1 Pod vs 2 Pods)",
+  "timestamp_iso": "2026-11-05T10:49:29.817267+00:00",
+  "target_ip": "18.197.241.64",
+  "parameters": {
+    "duration_seconds": 40,
+    "requests_per_second": 40,
+    "total_requests_per_run": 1600,
+    "crash_at_second": 15
+  },
+  "comparison": {
+    "single_replica_baseline": {
+      "label": "1 Replica (Basiskonfiguration)",
+      "total_requests": 1600,
+      "successful_requests": 1574,
+      "failed_requests": 26,
+      "error_rate_percent": 1.62,
+      "availability_percent": 98.38,
+      "latency_p50_ms": 118.14,
+      "latency_p95_ms": 582.82,
+      "timeseries_file": "experiments/results/exp1-timeseries-1pod.csv"
+    },
+    "multi_replica_improved": {
+      "label": "2 Replicas (Verbesserte Konfiguration)",
+      "total_requests": 1600,
+      "successful_requests": 1540,
+      "failed_requests": 60,
+      "error_rate_percent": 3.75,
+      "availability_percent": 96.25,
+      "latency_p50_ms": 94.47,
+      "latency_p95_ms": 1431.45,
+      "timeseries_file": "experiments/results/exp1-timeseries-2pods.csv"
+    }
+  }
+}

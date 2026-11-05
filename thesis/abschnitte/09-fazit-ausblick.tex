@@ -3,13 +3,13 @@
 
 \section{Zusammenfassendes Fazit}
 \label{sec:fazit}
-Die vorliegende Arbeit hat demonstriert, dass moderne cloud-native Betriebskonzepte auf Basis von Infrastructure as Code (HashiCorp Terraform) und GitOps (Argo~CD) auch unter strengen Budgetrestriktionen praxisnah und wissenschaftlich fundiert realisiert werden können. Durch den Einsatz der ressourcenschonenden Kubernetes-Distribution k3s auf einer kostengünstigen AWS-EC2-Instanz konnte eine vollständig automatisierte, API-konforme Orchestrierungsplattform aufgebaut werden, deren monatliche Betriebskosten im einstelligen bis niedrigen zweistelligen Eurobereich liegen.
+Die vorliegende Arbeit hat demonstriert, dass moderne cloud-native Betriebskonzepte auf Basis von Infrastructure as Code (HashiCorp Terraform) und GitOps (Argo~CD) auch unter strengen Budgetrestriktionen praxisnah und wissenschaftlich fundiert realisiert werden können. Durch den Einsatz der ressourcenschonenden Kubernetes-Distribution k3s auf AWS EC2 konnte eine vollständig automatisierte, API-konforme Orchestrierungsplattform aufgebaut werden, deren laufende Kosten im einstelligen bis niedrigen zweistelligen Eurobereich liegen und die sich bei Nichtgebrauch mittels \texttt{terraform destroy} kostenneutral abbauen lässt.
 
-Die Durchführung dreier kontrollierter Störungsexperimente lieferte eindeutige empirische Belege für die Resilienzeigenschaften des Gesamtsystems:
+Die Durchführung dreier kontrollierter Störungsexperimente in jeweils drei Messdurchläufen lieferte eindeutige empirische Belege für die Resilienzeigenschaften des Gesamtsystems:
 \begin{itemize}[noitemsep,topsep=2pt]
-    \item Bei abrupten Prozessabstürzen sichert Kubernetes den raschen Wiederanlauf bei einer Verfügbarkeit von 97,9\,\% bis 98,8\,\% und einer effektiven Ausfallzeit von lediglich 0,5 Sekunden für die Basiskonfiguration.
-    \item Defensiv konfigurierte Readiness-Probes und Rolling-Update-Strategien schützen den Cluster vor Totalausfällen bei fehlerhaften Releases, während ein Git-Revert den Ausgangszustand vollautomatisch wiederherstellt.
-    \item Konfigurationsabweichungen durch unautorisierte Eingriffe im Cluster werden von Argo~CD in 3{,}85 Sekunden detektiert und autonom binnen 13{,}32 Sekunden korrigiert — weit unterhalb der Anforderungsgrenze FA-3 ($<$\,60\,s).
+    \item Bei abrupten Prozessabstürzen reduziert eine redundante Pod-Auslegung (\texttt{replicas: 2}) die Fehleranzahl im direkten Vergleichslauf um \textbf{64,5\,\%} (Fehlerrate 0{,}69\,\% statt 1{,}94\,\%, Verfügbarkeit 99{,}31\,\%), verkürzt die effektive Ausfallzeit von 0{,}78\,s auf 0{,}28\,s und eliminiert den Latenzanstieg der Median-Antwortzeit ($p_{50}$).
+    \item Defensiv konfigurierte Readiness-Probes und Rolling-Update-Strategien (\texttt{maxUnavailable: 0}) verhindern bei fehlerhaften Software-Rollouts Ausfälle des Produktivverkehrs im Median vollständig (\textbf{100,00\,\%} Verfügbarkeit, Mittelwert 98{,}67\,\%), während ein Git-Revert den Ausgangszustand in durchschnittlich \textbf{3,96 Sekunden} deterministisch wiederherstellt.
+    \item Konfigurationsabweichungen durch unautorisierte Eingriffe im Cluster (\texttt{replicas=0}) werden von Argo~CD im Regelfall binnen \textbf{1,59 Sekunden} auf Spezifikationsebene revertiert und innerhalb von \textbf{8,70 Sekunden} vollständig geheilt — weit unterhalb der Anforderungsgrenze FA-3 ($<$\,60\,s).
 \end{itemize}
 
 Damit wurde gezeigt, dass GitOps und Containerorchestrierung die klassische Kluft zwischen hoher Ausfallsicherheit und budgetären Beschränkungen wirksam überbrücken können.
@@ -18,7 +18,7 @@ Damit wurde gezeigt, dass GitOps und Containerorchestrierung die klassische Kluf
 \label{sec:ausblick}
 Aufbauend auf den Ergebnissen dieser Untersuchung eröffnen sich vielversprechende Perspektiven für weiterführende Arbeiten:
 \begin{itemize}[noitemsep,topsep=2pt]
-    \item \textbf{Stochastisches Chaos Engineering:} Erweiterung der Testsuite um spezialisierte Frameworks wie Chaos Mesh zur Simulation zufälliger Netzwerklatenzen und CPU-Drosselungen im laufenden Betrieb.
-    \item \textbf{Zustandsbehaftete Workloads:} Untersuchung von Failover-Mechanismen bei verteilten Datenbanken und Storage-CSI-Treibern (z.\,B. Longhorn oder Rook-Ceph) unter k3s.
-    \item \textbf{Multi-Region- und Hybrid-Cloud-Szenarien:} Erprobung von GitOps-Workflows zur synchronen Verwaltung heterogener Cluster über mehrere Cloud-Provider oder On-Premises-Edge-Knoten hinweg.
+    \item \textbf{Ingress-Level Retries und Circuit Breaking:} Empirische Vermessung von Traefik-Retry-Middlewares und Service-Meshes (z.\,B. Linkerd oder Cilium), um auch transiente Handshake-Verluste während der Endpoints-Propagation auf 0{,}0\,\% zu senken.
+    \item \textbf{Zustandsbehaftete Workloads:} Untersuchung von Failover-Mechanismen bei verteilten Datenbanken und Cloud-Native-Storage-Treibern (z.\,B. Longhorn oder CloudNativePG) unter k3s.
+    \item \textbf{Multi-Node- und Multi-AZ-Topologien:} Erweiterung des Terraform-Moduls auf einen hochverfügbaren Multi-Node-k3s-Cluster mit eingebettetem etcd über mehrere AWS Availability Zones.
 \end{itemize}
